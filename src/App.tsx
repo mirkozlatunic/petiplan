@@ -4,6 +4,8 @@ import Header from './components/layout/Header';
 import SectionWrapper from './components/layout/SectionWrapper';
 import ProjectSetupPanel from './components/project/ProjectSetupPanel';
 import MaterialsCalculator from './components/materials/MaterialsCalculator';
+import MachineCalculator from './components/machines/MachineCalculator';
+import LaborCalculator from './components/labor/LaborCalculator';
 import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar } from 'lucide-react';
 
 function AppContent() {
@@ -20,11 +22,11 @@ function AppContent() {
         </SectionWrapper>
 
         <SectionWrapper title="Machine / Equipment" icon={<Cpu className="w-5 h-5" />} defaultOpen={false}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Machine calculator coming next...</p>
+          <MachineCalculator />
         </SectionWrapper>
 
         <SectionWrapper title="Labor" icon={<Users className="w-5 h-5" />} defaultOpen={false}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Labor calculator coming next...</p>
+          <LaborCalculator />
         </SectionWrapper>
 
         <SectionWrapper title="Cost Summary" icon={<BarChart3 className="w-5 h-5" />} defaultOpen={true}>
