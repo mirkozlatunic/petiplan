@@ -7,6 +7,7 @@ import MaterialsCalculator from './components/materials/MaterialsCalculator';
 import MachineCalculator from './components/machines/MachineCalculator';
 import LaborCalculator from './components/labor/LaborCalculator';
 import CostSummaryDashboard from './components/dashboard/CostSummaryDashboard';
+import CapacityTimeline from './components/timeline/CapacityTimeline';
 import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar } from 'lucide-react';
 
 function AppContent() {
@@ -35,7 +36,7 @@ function AppContent() {
         </SectionWrapper>
 
         <SectionWrapper title="Capacity Timeline" icon={<Calendar className="w-5 h-5" />} defaultOpen={false}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Timeline view coming next...</p>
+          <CapacityTimeline />
         </SectionWrapper>
       </main>
     </div>
