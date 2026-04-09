@@ -6,6 +6,7 @@ import ProjectSetupPanel from './components/project/ProjectSetupPanel';
 import MaterialsCalculator from './components/materials/MaterialsCalculator';
 import MachineCalculator from './components/machines/MachineCalculator';
 import LaborCalculator from './components/labor/LaborCalculator';
+import CostSummaryDashboard from './components/dashboard/CostSummaryDashboard';
 import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar } from 'lucide-react';
 
 function AppContent() {
@@ -30,7 +31,7 @@ function AppContent() {
         </SectionWrapper>
 
         <SectionWrapper title="Cost Summary" icon={<BarChart3 className="w-5 h-5" />} defaultOpen={true}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Cost dashboard coming next...</p>
+          <CostSummaryDashboard />
         </SectionWrapper>
 
         <SectionWrapper title="Capacity Timeline" icon={<Calendar className="w-5 h-5" />} defaultOpen={false}>
