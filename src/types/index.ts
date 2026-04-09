@@ -1,0 +1,90 @@
+export type AminoAcidCode =
+  | 'A' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'K' | 'L'
+  | 'M' | 'N' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'V' | 'W' | 'Y';
+
+export type CostTier = 'common' | 'moderate' | 'expensive';
+
+export type ScaleOption = '1g' | '5g' | '10g' | '50g' | '100g' | '500g' | '1kg' | 'custom';
+
+export type Phase = 'synthesis' | 'purification' | 'lyophilization' | 'qc';
+
+export interface AminoAcidEntry {
+  code: AminoAcidCode;
+  name: string;
+  tier: CostTier;
+  count: number;
+  costPerGram: number;
+  gramsNeeded: number;
+  subtotal: number;
+}
+
+export interface CustomMaterial {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  costPerUnit: number;
+  subtotal: number;
+}
+
+export interface Machine {
+  id: string;
+  name: string;
+  hourlyCost: number;
+  hoursPerBatch: number;
+  unitsAvailable: number;
+  utilization: number;
+  costPerBatch: number;
+}
+
+export interface LaborRole {
+  id: string;
+  name: string;
+  hourlyRate: number;
+  hoursPerBatch: number;
+  headcount: number;
+  costPerBatch: number;
+  fte: number;
+}
+
+export interface PhaseConfig {
+  phase: Phase;
+  label: string;
+  daysPerBatch: number;
+  color: string;
+}
+
+export interface CostSnapshot {
+  timestamp: number;
+  totalCost: number;
+  materialsCost: number;
+  machineCost: number;
+  laborCost: number;
+  costPerBatch: number;
+  costPerGram: number;
+}
+
+export interface ProjectState {
+  projectName: string;
+  sequence: string;
+  batchCount: number;
+  scale: ScaleOption;
+  customScaleGrams: number;
+  startDate: string;
+  targetEndDate: string;
+  parsedAminoAcids: AminoAcidEntry[];
+  couplingExcessFactor: number;
+  resinCostPerGram: number;
+  customMaterials: CustomMaterial[];
+  machines: Machine[];
+  laborRoles: LaborRole[];
+  phases: PhaseConfig[];
+  previousSnapshot: CostSnapshot | null;
+  sellingPricePerGram: number;
+}
+
+export interface SavedProject {
+  name: string;
+  savedAt: string;
+  state: ProjectState;
+}
