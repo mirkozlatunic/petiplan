@@ -1,4 +1,4 @@
-import type { ProjectState, ScaleOption, AminoAcidEntry, CustomMaterial, Machine, LaborRole, PhaseConfig, CostSnapshot, Phase } from '../types';
+import type { ProjectState, ScaleOption, AminoAcidEntry, CustomMaterial, Machine, LaborRole, CostSnapshot, Phase } from '../types';
 import { parseSequence, recalcAminoAcid } from '../utils/sequenceParser';
 import { scaleToGrams } from '../utils/costCalculator';
 import { DEFAULT_PHASES } from '../constants/phaseDefaults';

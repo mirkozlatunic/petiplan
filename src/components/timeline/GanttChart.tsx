@@ -60,11 +60,12 @@ export default function GanttChart({ batches, totalDays, targetDays }: GanttChar
             tick={{ fontSize: 12, fill: '#6B7280' }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => {
-              if (name.endsWith('Offset')) return [null, null];
-              const label = name.replace('Duration', '');
+            formatter={(value, name) => {
+              const nameStr = String(name);
+              if (nameStr.endsWith('Offset')) return [null, null];
+              const label = nameStr.replace('Duration', '');
               const phaseInfo = phases.find((p) => p.phase === label);
-              return [formatDuration(value), phaseInfo?.label ?? label];
+              return [formatDuration(Number(value)), phaseInfo?.label ?? label];
             }}
             contentStyle={{
               backgroundColor: 'rgba(255,255,255,0.95)',
@@ -105,7 +106,7 @@ export default function GanttChart({ batches, totalDays, targetDays }: GanttChar
               radius={[3, 3, 3, 3]}
               isAnimationActive={false}
             >
-              {data.map((entry, index) => {
+              {data.map((_entry, index) => {
                 const batch = batches[index];
                 const batchPhase = batch.phases.find((p) => p.phase === phase.phase);
                 const exceeds = batchPhase?.exceedsTarget ?? false;

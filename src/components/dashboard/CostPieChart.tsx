@@ -51,7 +51,7 @@ export default function CostPieChart({ materialsCost, machineCost, laborCost }: 
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => [formatCurrency(value), '']}
+            formatter={(value) => [formatCurrency(Number(value)), '']}
             contentStyle={{
               backgroundColor: 'rgba(255,255,255,0.95)',
               border: '1px solid #e5e7eb',
@@ -61,10 +61,10 @@ export default function CostPieChart({ materialsCost, machineCost, laborCost }: 
           />
           <Legend
             verticalAlign="bottom"
-            formatter={(value: string, entry: { payload?: PieEntry }) => {
-              const item = entry.payload;
-              if (!item) return value;
-              const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+            formatter={(value, entry) => {
+              const payload = entry.payload as PieEntry | undefined;
+              if (!payload) return value;
+              const pct = total > 0 ? ((payload.value / total) * 100).toFixed(1) : '0';
               return `${value} (${pct}%)`;
             }}
             wrapperStyle={{ fontSize: '12px' }}

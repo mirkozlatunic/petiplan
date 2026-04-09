@@ -9,6 +9,7 @@ import LaborCalculator from './components/labor/LaborCalculator';
 import CostSummaryDashboard from './components/dashboard/CostSummaryDashboard';
 import CapacityTimeline from './components/timeline/CapacityTimeline';
 import ExportPanel from './components/export/ExportPanel';
+import MobileSummaryBar from './components/layout/MobileSummaryBar';
 import { usePdfExport } from './hooks/usePdfExport';
 import { saveProject, listSavedProjects, loadProject } from './utils/storage';
 import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar, Share2 } from 'lucide-react';
@@ -31,7 +32,7 @@ function AppContent() {
   const savedProjects = listSavedProjects();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 md:pb-0">
       <Header onSave={handleSave} onLoad={handleLoad} onExportPdf={exportPdf} />
 
       {showLoadModal && savedProjects.length > 0 && (
@@ -90,6 +91,8 @@ function AppContent() {
           <ExportPanel onExportPdf={exportPdf} />
         </SectionWrapper>
       </main>
+
+      <MobileSummaryBar />
     </div>
   );
 }
