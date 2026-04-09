@@ -2,6 +2,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ProjectProvider } from './context/ProjectContext';
 import Header from './components/layout/Header';
 import SectionWrapper from './components/layout/SectionWrapper';
+import ProjectSetupPanel from './components/project/ProjectSetupPanel';
+import MaterialsCalculator from './components/materials/MaterialsCalculator';
 import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar } from 'lucide-react';
 
 function AppContent() {
@@ -10,11 +12,11 @@ function AppContent() {
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <SectionWrapper title="Project Setup" icon={<Settings className="w-5 h-5" />} defaultOpen={true}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Project setup form coming next...</p>
+          <ProjectSetupPanel />
         </SectionWrapper>
 
         <SectionWrapper title="Amino Acid & Starting Materials" icon={<FlaskRound className="w-5 h-5" />}>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Materials calculator coming next...</p>
+          <MaterialsCalculator />
         </SectionWrapper>
 
         <SectionWrapper title="Machine / Equipment" icon={<Cpu className="w-5 h-5" />} defaultOpen={false}>
