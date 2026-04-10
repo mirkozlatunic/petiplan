@@ -16,6 +16,7 @@ export default function MobileSummaryBar() {
     state.resinCostPerGram,
     grams,
     state.customMaterials,
+    state.otherMaterials,
   );
   const totalMaterials = materials.totalMaterialsCost * state.batchCount;
   const machines = calculateMachineCost(state.machines, state.batchCount);

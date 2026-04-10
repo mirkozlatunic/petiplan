@@ -10,11 +10,43 @@ import {
 } from 'recharts';
 import type { BatchTimeline } from '../../utils/capacityCalculator';
 import { formatDuration } from '../../utils/formatters';
+import { useTheme } from '@/context/ThemeContext';
+
+function TargetLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
+  const x = viewBox?.x ?? 0;
+  const labelWidth = 100;
+  const labelHeight = 20;
+  const padding = 6;
+  return (
+    <g>
+      <rect
+        x={x - labelWidth / 2}
+        y={-labelHeight - padding}
+        width={labelWidth}
+        height={labelHeight}
+        rx={4}
+        fill="#EF4444"
+      />
+      <text
+        x={x}
+        y={-labelHeight - padding + labelHeight / 2 + 1}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="#FFFFFF"
+        fontSize={11}
+        fontWeight={600}
+      >
+        Target Deadline
+      </text>
+    </g>
+  );
+}
 
 interface GanttChartProps {
   batches: BatchTimeline[];
   totalDays: number;
   targetDays: number | null;
+  startDate: string;
 }
 
 interface GanttDataPoint {
@@ -22,7 +54,10 @@ interface GanttDataPoint {
   [key: string]: number | string;
 }
 
-export default function GanttChart({ batches, totalDays, targetDays }: GanttChartProps) {
+export default function GanttChart({ batches, totalDays, targetDays, startDate }: GanttChartProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   if (batches.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-gray-400 dark:text-gray-500 italic">
@@ -44,13 +79,18 @@ export default function GanttChart({ batches, totalDays, targetDays }: GanttChar
   const maxDay = Math.max(totalDays, targetDays ?? 0) + 2;
 
   return (
-    <div style={{ height: Math.max(120, batches.length * 60 + 60) }}>
+    <div style={{ height: Math.max(140, batches.length * 60 + 80) }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 28, right: 30, left: 20, bottom: 10 }}>
           <XAxis
             type="number"
             domain={[0, maxDay]}
-            tickFormatter={(v: number) => `Day ${v}`}
+            tickFormatter={(v: number) => {
+              if (!startDate) return `Day ${v}`;
+              const date = new Date(startDate);
+              date.setDate(date.getDate() + v);
+              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }}
             tick={{ fontSize: 11, fill: '#9CA3AF' }}
           />
           <YAxis
@@ -68,11 +108,13 @@ export default function GanttChart({ batches, totalDays, targetDays }: GanttChar
               return [formatDuration(Number(value)), phaseInfo?.label ?? label];
             }}
             contentStyle={{
-              backgroundColor: 'rgba(255,255,255,0.95)',
-              border: '1px solid #e5e7eb',
+              backgroundColor: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)',
+              border: isDark ? '1px solid #475569' : '1px solid #e5e7eb',
               borderRadius: '8px',
               fontSize: '12px',
+              color: isDark ? '#e2e8f0' : '#1e293b',
             }}
+            cursor={{ fill: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.05)' }}
           />
           {targetDays !== null && targetDays > 0 && (
             <ReferenceLine
@@ -80,12 +122,8 @@ export default function GanttChart({ batches, totalDays, targetDays }: GanttChar
               stroke="#EF4444"
               strokeWidth={2}
               strokeDasharray="6 3"
-              label={{
-                value: 'Target',
-                position: 'top',
-                fill: '#EF4444',
-                fontSize: 11,
-              }}
+              ifOverflow="extendDomain"
+              label={<TargetLabel />}
             />
           )}
           {phases.map((phase) => (

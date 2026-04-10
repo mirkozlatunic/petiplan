@@ -29,7 +29,7 @@ export default function PhaseEditor() {
             className={inputClass}
             min={0.5}
             step={0.5}
-            value={phase.daysPerBatch}
+            value={phase.daysPerBatch || ''}
             onChange={(e) =>
               dispatch({
                 type: 'UPDATE_PHASE',

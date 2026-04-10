@@ -1,5 +1,5 @@
 import { useProjectState, useProjectDispatch } from '../../context/ProjectContext';
-import type { ScaleOption } from '../../types';
+import type { ScaleOption, GmpStatus } from '../../types';
 
 const SCALE_OPTIONS: { value: ScaleOption; label: string }[] = [
   { value: '1g', label: '1 g' },
@@ -23,8 +23,8 @@ export default function ProjectSetupPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="sm:col-span-2 md:col-span-1">
           <label className={labelClass}>Project Name</label>
           <input
             type="text"
@@ -34,35 +34,52 @@ export default function ProjectSetupPanel() {
             onChange={(e) => dispatch({ type: 'SET_PROJECT_NAME', payload: e.target.value })}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Number of Batches</label>
-            <input
-              type="number"
-              className={inputClass}
-              min={1}
-              value={state.batchCount}
-              onChange={(e) =>
-                dispatch({ type: 'SET_BATCH_COUNT', payload: parseInt(e.target.value) || 1 })
-              }
-            />
+        <div>
+          <label className={labelClass}>GMP Classification</label>
+          <div className="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden h-9.5">
+            {([{ value: 'non-gmp', label: 'Non-GMP' }, { value: 'gmp', label: 'GMP' }] as { value: GmpStatus; label: string }[]).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => dispatch({ type: 'SET_GMP_STATUS', payload: opt.value })}
+                className={`flex-1 px-3 text-sm font-medium transition-colors ${
+                  state.gmpStatus === opt.value
+                    ? 'bg-accent-500 text-white'
+                    : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className={labelClass}>Scale per Batch</label>
-            <select
-              className={inputClass}
-              value={state.scale}
-              onChange={(e) =>
-                dispatch({ type: 'SET_SCALE', payload: e.target.value as ScaleOption })
-              }
-            >
-              {SCALE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Number of Batches</label>
+          <input
+            type="number"
+            className={inputClass}
+            min={1}
+            value={state.batchCount || ''}
+            onChange={(e) =>
+              dispatch({ type: 'SET_BATCH_COUNT', payload: parseInt(e.target.value) || 1 })
+            }
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Scale per Batch</label>
+          <select
+            className={inputClass}
+            value={state.scale}
+            onChange={(e) =>
+              dispatch({ type: 'SET_SCALE', payload: e.target.value as ScaleOption })
+            }
+          >
+            {SCALE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -74,7 +91,7 @@ export default function ProjectSetupPanel() {
             className={inputClass}
             min={0.1}
             step={0.1}
-            value={state.customScaleGrams}
+            value={state.customScaleGrams || ''}
             onChange={(e) =>
               dispatch({ type: 'SET_CUSTOM_SCALE', payload: parseFloat(e.target.value) || 1 })
             }

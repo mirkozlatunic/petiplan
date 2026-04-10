@@ -45,7 +45,7 @@ export default function CustomLineItem() {
               <input
                 type="number"
                 className="w-16 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
-                value={m.quantity}
+                value={m.quantity || ''}
                 min={0}
                 onChange={(e) =>
                   dispatch({
@@ -59,7 +59,7 @@ export default function CustomLineItem() {
               <input
                 type="number"
                 className="w-20 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
-                value={m.costPerUnit}
+                value={m.costPerUnit || ''}
                 min={0}
                 step={0.01}
                 onChange={(e) =>
@@ -99,7 +99,7 @@ export default function CustomLineItem() {
               className={inputClass}
               placeholder="Qty"
               min={0}
-              value={newItem.quantity}
+              value={newItem.quantity || ''}
               onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) || 0 })}
             />
             <input

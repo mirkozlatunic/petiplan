@@ -42,7 +42,7 @@ export default function CouplingResinSummary() {
             className="w-20 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
             min={0}
             step={1}
-            value={state.resinCostPerGram}
+            value={state.resinCostPerGram || ''}
             onChange={(e) =>
               dispatch({ type: 'SET_RESIN_COST', payload: parseFloat(e.target.value) || 0 })
             }
@@ -64,7 +64,7 @@ export default function CouplingResinSummary() {
           className="w-16 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
           min={1}
           step={0.5}
-          value={state.couplingExcessFactor}
+          value={state.couplingExcessFactor || ''}
           onChange={(e) =>
             dispatch({
               type: 'SET_COUPLING_EXCESS_FACTOR',

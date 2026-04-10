@@ -8,6 +8,20 @@ import PhaseEditor from './PhaseEditor';
 export default function CapacityTimeline() {
   const state = useProjectState();
 
+  if (state.machines.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertTriangle className="w-8 h-8 text-warning mb-3" />
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          No machines added yet
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Add equipment in the Machine / Equipment section to generate the capacity timeline.
+        </p>
+      </div>
+    );
+  }
+
   const timeline = generateTimeline(
     state.phases,
     state.batchCount,
@@ -73,6 +87,7 @@ export default function CapacityTimeline() {
         batches={timeline.batches}
         totalDays={timeline.totalDays}
         targetDays={targetDays}
+        startDate={state.startDate}
       />
 
       <div className="flex flex-wrap gap-4">

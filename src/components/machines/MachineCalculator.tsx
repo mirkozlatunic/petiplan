@@ -25,6 +25,7 @@ export default function MachineCalculator() {
         hoursPerBatch: preset.hoursPerBatch,
         unitsAvailable: preset.unitsAvailable,
         utilization: preset.utilization,
+        linkedPhase: preset.linkedPhase,
       },
     });
     setShowPresets(false);

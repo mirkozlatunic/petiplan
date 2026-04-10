@@ -19,6 +19,7 @@ export interface MaterialsCostResult {
   couplingCost: number;
   resinCost: number;
   customCost: number;
+  otherMaterialsCost: number;
   totalMaterialsCost: number;
 }
 
@@ -27,17 +28,20 @@ export function calculateMaterialsCost(
   resinCostPerGram: number,
   scaleGrams: number,
   customMaterials: CustomMaterial[],
+  otherMaterials: CustomMaterial[] = [],
 ): MaterialsCostResult {
   const aaCost = aminoAcids.reduce((sum, aa) => sum + aa.subtotal, 0);
   const couplingCost = aaCost * 0.30;
   const resinCost = resinCostPerGram * scaleGrams;
   const customCost = customMaterials.reduce((sum, m) => sum + m.subtotal, 0);
+  const otherMaterialsCost = otherMaterials.reduce((sum, m) => sum + m.subtotal, 0);
   return {
     aaCost,
     couplingCost,
     resinCost,
     customCost,
-    totalMaterialsCost: aaCost + couplingCost + resinCost + customCost,
+    otherMaterialsCost,
+    totalMaterialsCost: aaCost + couplingCost + resinCost + customCost + otherMaterialsCost,
   };
 }
 

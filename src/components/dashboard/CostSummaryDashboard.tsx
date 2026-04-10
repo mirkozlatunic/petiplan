@@ -23,6 +23,7 @@ export default function CostSummaryDashboard() {
     state.resinCostPerGram,
     grams,
     state.customMaterials,
+    state.otherMaterials,
   );
   const machineCost = calculateMachineCost(state.machines, state.batchCount);
   const laborCost = calculateLaborCost(state.laborRoles, state.batchCount);

@@ -13,6 +13,7 @@ export default function MaterialsCalculator() {
     state.resinCostPerGram,
     grams,
     state.customMaterials,
+    state.otherMaterials,
   );
 
   return (

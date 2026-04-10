@@ -1,7 +1,15 @@
-import { Trash2, AlertTriangle } from 'lucide-react';
-import type { Machine } from '../../types';
+import { Trash2, AlertTriangle, Link } from 'lucide-react';
+import type { Machine, Phase } from '../../types';
 import { useProjectDispatch } from '../../context/ProjectContext';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
+
+const PHASE_LABELS: Record<Phase, string> = {
+  synthesis: 'Synthesis',
+  cleavage: 'Cleavage',
+  purification: 'Purification',
+  lyophilization: 'Lyophilization',
+  qc: 'QC/Analysis',
+};
 
 interface MachineCardProps {
   machine: Machine;
@@ -36,6 +44,12 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             value={machine.name}
             onChange={(e) => update({ name: e.target.value })}
           />
+          {machine.linkedPhase && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400 rounded-full whitespace-nowrap">
+              <Link className="w-3 h-3" />
+              {PHASE_LABELS[machine.linkedPhase]}
+            </span>
+          )}
           {isBottleneck && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-danger text-white rounded-full whitespace-nowrap">
               <AlertTriangle className="w-3 h-3" />
@@ -59,7 +73,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             className={inputClass}
             min={0}
             step={1}
-            value={machine.hourlyCost}
+            value={machine.hourlyCost || ''}
             onChange={(e) => update({ hourlyCost: parseFloat(e.target.value) || 0 })}
           />
         </div>
@@ -70,7 +84,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             className={inputClass}
             min={0}
             step={1}
-            value={machine.hoursPerBatch}
+            value={machine.hoursPerBatch || ''}
             onChange={(e) => update({ hoursPerBatch: parseFloat(e.target.value) || 0 })}
           />
         </div>
@@ -81,7 +95,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             className={inputClass}
             min={1}
             step={1}
-            value={machine.unitsAvailable}
+            value={machine.unitsAvailable || ''}
             onChange={(e) => update({ unitsAvailable: parseInt(e.target.value) || 1 })}
           />
         </div>

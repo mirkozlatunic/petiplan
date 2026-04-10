@@ -44,7 +44,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             className={inputClass}
             min={0}
             step={1}
-            value={role.hourlyRate}
+            value={role.hourlyRate || ''}
             onChange={(e) => update({ hourlyRate: parseFloat(e.target.value) || 0 })}
           />
         </div>
@@ -55,7 +55,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             className={inputClass}
             min={0}
             step={1}
-            value={role.hoursPerBatch}
+            value={role.hoursPerBatch || ''}
             onChange={(e) => update({ hoursPerBatch: parseFloat(e.target.value) || 0 })}
           />
         </div>
@@ -66,7 +66,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             className={inputClass}
             min={1}
             step={1}
-            value={role.headcount}
+            value={role.headcount || ''}
             onChange={(e) => update({ headcount: parseInt(e.target.value) || 1 })}
           />
         </div>

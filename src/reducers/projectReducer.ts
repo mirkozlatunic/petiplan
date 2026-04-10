@@ -1,10 +1,11 @@
-import type { ProjectState, ScaleOption, AminoAcidEntry, CustomMaterial, Machine, LaborRole, CostSnapshot, Phase } from '../types';
+import type { ProjectState, ScaleOption, GmpStatus, AminoAcidEntry, CustomMaterial, Machine, LaborRole, CostSnapshot, Phase } from '../types';
 import { parseSequence, recalcAminoAcid } from '../utils/sequenceParser';
 import { scaleToGrams } from '../utils/costCalculator';
 import { DEFAULT_PHASES } from '../constants/phaseDefaults';
 
 export const initialState: ProjectState = {
   projectName: '',
+  gmpStatus: 'non-gmp',
   sequence: '',
   batchCount: 1,
   scale: '10g',
@@ -15,6 +16,7 @@ export const initialState: ProjectState = {
   couplingExcessFactor: 3,
   resinCostPerGram: 150,
   customMaterials: [],
+  otherMaterials: [],
   machines: [],
   laborRoles: [],
   phases: DEFAULT_PHASES,
@@ -24,6 +26,7 @@ export const initialState: ProjectState = {
 
 export type ProjectAction =
   | { type: 'SET_PROJECT_NAME'; payload: string }
+  | { type: 'SET_GMP_STATUS'; payload: GmpStatus }
   | { type: 'SET_SEQUENCE'; payload: string }
   | { type: 'SET_BATCH_COUNT'; payload: number }
   | { type: 'SET_SCALE'; payload: ScaleOption }
@@ -36,6 +39,9 @@ export type ProjectAction =
   | { type: 'ADD_CUSTOM_MATERIAL'; payload: Omit<CustomMaterial, 'id' | 'subtotal'> }
   | { type: 'UPDATE_CUSTOM_MATERIAL'; payload: { id: string; updates: Partial<CustomMaterial> } }
   | { type: 'REMOVE_CUSTOM_MATERIAL'; payload: string }
+  | { type: 'ADD_OTHER_MATERIAL'; payload: Omit<CustomMaterial, 'id' | 'subtotal'> }
+  | { type: 'UPDATE_OTHER_MATERIAL'; payload: { id: string; updates: Partial<CustomMaterial> } }
+  | { type: 'REMOVE_OTHER_MATERIAL'; payload: string }
   | { type: 'ADD_MACHINE'; payload: Omit<Machine, 'id' | 'costPerBatch'> }
   | { type: 'UPDATE_MACHINE'; payload: { id: string; updates: Partial<Machine> } }
   | { type: 'REMOVE_MACHINE'; payload: string }
@@ -81,6 +87,9 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
   switch (action.type) {
     case 'SET_PROJECT_NAME':
       return { ...state, projectName: action.payload };
+
+    case 'SET_GMP_STATUS':
+      return { ...state, gmpStatus: action.payload };
 
     case 'SET_SEQUENCE': {
       const newState = { ...state, sequence: action.payload };
@@ -171,6 +180,35 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         customMaterials: state.customMaterials.filter((m) => m.id !== action.payload),
       };
 
+    case 'ADD_OTHER_MATERIAL': {
+      const newMaterial: CustomMaterial = {
+        ...action.payload,
+        id: crypto.randomUUID(),
+        subtotal: action.payload.quantity * action.payload.costPerUnit,
+      };
+      return { ...state, otherMaterials: [...state.otherMaterials, newMaterial] };
+    }
+
+    case 'UPDATE_OTHER_MATERIAL': {
+      return {
+        ...state,
+        otherMaterials: state.otherMaterials.map((m) => {
+          if (m.id === action.payload.id) {
+            const updated = { ...m, ...action.payload.updates };
+            updated.subtotal = updated.quantity * updated.costPerUnit;
+            return updated;
+          }
+          return m;
+        }),
+      };
+    }
+
+    case 'REMOVE_OTHER_MATERIAL':
+      return {
+        ...state,
+        otherMaterials: state.otherMaterials.filter((m) => m.id !== action.payload),
+      };
+
     case 'ADD_MACHINE': {
       const newMachine: Machine = {
         ...action.payload,
@@ -181,17 +219,30 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     }
 
     case 'UPDATE_MACHINE': {
-      return {
-        ...state,
-        machines: state.machines.map((m) => {
-          if (m.id === action.payload.id) {
-            const updated = { ...m, ...action.payload.updates };
-            updated.costPerBatch = computeMachineCost(updated);
-            return updated;
-          }
-          return m;
-        }),
-      };
+      const updatedMachines = state.machines.map((m) => {
+        if (m.id === action.payload.id) {
+          const updated = { ...m, ...action.payload.updates };
+          updated.costPerBatch = computeMachineCost(updated);
+          return updated;
+        }
+        return m;
+      });
+
+      // Sync: if hoursPerBatch changed on a machine with a linkedPhase, update that phase's daysPerBatch
+      const changedMachine = updatedMachines.find((m) => m.id === action.payload.id);
+      let updatedPhases = state.phases;
+      if (
+        changedMachine?.linkedPhase &&
+        action.payload.updates.hoursPerBatch !== undefined
+      ) {
+        updatedPhases = state.phases.map((p) =>
+          p.phase === changedMachine.linkedPhase
+            ? { ...p, daysPerBatch: Math.max(0.5, Math.round((changedMachine.hoursPerBatch / 24) * 2) / 2) }
+            : p,
+        );
+      }
+
+      return { ...state, machines: updatedMachines, phases: updatedPhases };
     }
 
     case 'REMOVE_MACHINE':
@@ -226,14 +277,23 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       return { ...state, laborRoles: state.laborRoles.filter((r) => r.id !== action.payload) };
 
     case 'UPDATE_PHASE': {
-      return {
-        ...state,
-        phases: state.phases.map((p) =>
-          p.phase === action.payload.phase
-            ? { ...p, daysPerBatch: Math.max(0.5, action.payload.daysPerBatch) }
-            : p,
-        ),
-      };
+      const newDays = Math.max(0.5, action.payload.daysPerBatch);
+      const newPhases = state.phases.map((p) =>
+        p.phase === action.payload.phase ? { ...p, daysPerBatch: newDays } : p,
+      );
+
+      // Sync: update hoursPerBatch on all machines linked to this phase
+      const newHours = newDays * 24;
+      const syncedMachines = state.machines.map((m) => {
+        if (m.linkedPhase === action.payload.phase) {
+          const updated = { ...m, hoursPerBatch: newHours };
+          updated.costPerBatch = computeMachineCost(updated);
+          return updated;
+        }
+        return m;
+      });
+
+      return { ...state, phases: newPhases, machines: syncedMachines };
     }
 
     case 'SAVE_SNAPSHOT':
@@ -243,7 +303,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       return { ...state, sellingPricePerGram: action.payload };
 
     case 'LOAD_PROJECT':
-      return action.payload;
+      return { ...initialState, ...action.payload };
 
     case 'RESET_PROJECT':
       return initialState;

@@ -6,7 +6,9 @@ export type CostTier = 'common' | 'moderate' | 'expensive';
 
 export type ScaleOption = '1g' | '5g' | '10g' | '50g' | '100g' | '500g' | '1kg' | 'custom';
 
-export type Phase = 'synthesis' | 'purification' | 'lyophilization' | 'qc';
+export type Phase = 'synthesis' | 'cleavage' | 'purification' | 'lyophilization' | 'qc';
+
+export type GmpStatus = 'non-gmp' | 'gmp';
 
 export interface AminoAcidEntry {
   code: AminoAcidCode;
@@ -35,6 +37,7 @@ export interface Machine {
   unitsAvailable: number;
   utilization: number;
   costPerBatch: number;
+  linkedPhase?: Phase;
 }
 
 export interface LaborRole {
@@ -66,6 +69,7 @@ export interface CostSnapshot {
 
 export interface ProjectState {
   projectName: string;
+  gmpStatus: GmpStatus;
   sequence: string;
   batchCount: number;
   scale: ScaleOption;
@@ -76,6 +80,7 @@ export interface ProjectState {
   couplingExcessFactor: number;
   resinCostPerGram: number;
   customMaterials: CustomMaterial[];
+  otherMaterials: CustomMaterial[];
   machines: Machine[];
   laborRoles: LaborRole[];
   phases: PhaseConfig[];

@@ -1,13 +1,17 @@
 import { useCallback, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
 export function usePdfExport() {
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const exportPdf = useCallback(async (filename = 'peptiplan-report.pdf') => {
+  const exportPdf = useCallback(async (projectName?: string, scale?: string, gmpStatus?: string) => {
     const element = contentRef.current;
     if (!element) return;
+
+    // Hide elements marked with data-pdf-hide before capture
+    const hiddenEls = element.querySelectorAll('[data-pdf-hide]');
+    hiddenEls.forEach((el) => ((el as HTMLElement).style.display = 'none'));
 
     const canvas = await html2canvas(element, {
       scale: 2,
@@ -16,25 +20,34 @@ export function usePdfExport() {
       backgroundColor: '#FFFFFF',
     });
 
+    // Restore hidden elements
+    hiddenEls.forEach((el) => ((el as HTMLElement).style.display = ''));
+
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 210; // A4 width in mm
+    const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const margin = 5;
+    const usableWidth = pageWidth - margin * 2;
+    const usableHeight = pageHeight - margin * 2;
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    let heightLeft = imgHeight;
-    let position = 0;
+    // Scale to fit on one page
+    let imgWidth = usableWidth;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    if (imgHeight > usableHeight) {
+      const scaleFactor = usableHeight / imgHeight;
+      imgHeight = usableHeight;
+      imgWidth = imgWidth * scaleFactor;
     }
 
+    const xOffset = (pageWidth - imgWidth) / 2;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.addImage(imgData, 'PNG', xOffset, margin, imgWidth, imgHeight);
+
+    const safeName = (projectName || 'peptiplan').replace(/[^a-zA-Z0-9_\- ]/g, '');
+    const gmpLabel = gmpStatus === 'gmp' ? 'GMP' : gmpStatus === 'non-gmp' ? 'Non-GMP' : '';
+    const parts = [safeName, scale, gmpLabel].filter(Boolean);
+    const filename = `${parts.join(', ')}.pdf`;
     pdf.save(filename);
   }, []);
 

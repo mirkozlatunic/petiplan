@@ -1,98 +1,202 @@
 import { ThemeProvider } from './context/ThemeContext';
-import { ProjectProvider, useProjectState, useProjectDispatch } from './context/ProjectContext';
+import { ProjectProvider, useProjectState } from './context/ProjectContext';
 import Header from './components/layout/Header';
 import SectionWrapper from './components/layout/SectionWrapper';
+import type { SectionStatus } from './components/layout/SectionWrapper';
 import ProjectSetupPanel from './components/project/ProjectSetupPanel';
 import MaterialsCalculator from './components/materials/MaterialsCalculator';
+import OtherMaterialsCalculator from './components/materials/OtherMaterialsCalculator';
 import MachineCalculator from './components/machines/MachineCalculator';
 import LaborCalculator from './components/labor/LaborCalculator';
-import CostSummaryDashboard from './components/dashboard/CostSummaryDashboard';
 import CapacityTimeline from './components/timeline/CapacityTimeline';
-import ExportPanel from './components/export/ExportPanel';
+import ReviewPage from './components/review/ReviewPage';
 import MobileSummaryBar from './components/layout/MobileSummaryBar';
-import { usePdfExport } from './hooks/usePdfExport';
-import { saveProject, listSavedProjects, loadProject } from './utils/storage';
-import { Settings, FlaskRound, Cpu, Users, BarChart3, Calendar, Share2 } from 'lucide-react';
-import { useState } from 'react';
+import { Settings, FlaskRound, Beaker, Cpu, Users, Calendar, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 
-function AppContent() {
+export type Page = 'builder' | 'review';
+
+export interface SectionStatuses {
+  projectSetup: SectionStatus;
+  materials: SectionStatus;
+  otherMaterials: SectionStatus;
+  machines: SectionStatus;
+  labor: SectionStatus;
+  timeline: SectionStatus;
+}
+
+const SECTION_IDS = {
+  projectSetup: 'section-project-setup',
+  materials: 'section-materials',
+  otherMaterials: 'section-other-materials',
+  machines: 'section-machines',
+  labor: 'section-labor',
+  timeline: 'section-timeline',
+} as const;
+
+export type SectionKey = keyof typeof SECTION_IDS;
+
+const SECTION_LABELS: Record<SectionKey, string> = {
+  projectSetup: 'Project Setup',
+  materials: 'Amino Acid & Starting Materials',
+  otherMaterials: 'Other Materials & Consumables',
+  machines: 'Machine / Equipment',
+  labor: 'Labor',
+  timeline: 'Capacity Timeline',
+};
+
+function useProjectStatus(): SectionStatuses {
   const state = useProjectState();
-  const dispatch = useProjectDispatch();
-  const { contentRef, exportPdf } = usePdfExport();
-  const [showLoadModal, setShowLoadModal] = useState(false);
 
-  const handleSave = () => {
-    saveProject(state);
-  };
+  return useMemo(() => {
+    const projectSetup: SectionStatus =
+      state.projectName.trim() !== '' &&
+      state.sequence.trim() !== '' &&
+      state.batchCount >= 1 &&
+      state.startDate !== '' &&
+      state.targetEndDate !== ''
+        ? 'complete'
+        : 'incomplete';
 
-  const handleLoad = () => {
-    setShowLoadModal(!showLoadModal);
-  };
+    const materials: SectionStatus =
+      state.parsedAminoAcids.length > 0 ? 'complete' : 'incomplete';
 
-  const savedProjects = listSavedProjects();
+    const otherMaterials: SectionStatus =
+      state.otherMaterials.length > 0 ? 'complete' : 'incomplete';
+
+    const machines: SectionStatus =
+      state.machines.length > 0 ? 'complete' : 'incomplete';
+
+    const labor: SectionStatus =
+      state.laborRoles.length > 0 ? 'complete' : 'incomplete';
+
+    const timeline: SectionStatus =
+      state.startDate !== '' && state.targetEndDate !== '' && state.machines.length > 0 && state.phases.length > 0
+        ? 'complete'
+        : 'incomplete';
+
+    return { projectSetup, materials, otherMaterials, machines, labor, timeline };
+  }, [state]);
+}
+
+function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void }) {
+  const status = useProjectStatus();
+  const [warning, setWarning] = useState<string | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const allComplete = Object.values(status).every((s) => s === 'complete');
+
+  const handleReviewClick = useCallback(() => {
+    if (allComplete) {
+      onNavigateToReview();
+      return;
+    }
+
+    // Find first incomplete section
+    const sectionKeys: SectionKey[] = ['projectSetup', 'materials', 'otherMaterials', 'machines', 'labor', 'timeline'];
+    const firstIncomplete = sectionKeys.find((key) => status[key] === 'incomplete');
+
+    if (firstIncomplete) {
+      const label = SECTION_LABELS[firstIncomplete];
+      setWarning(`Please complete "${label}" before proceeding to review.`);
+
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = setTimeout(() => setWarning(null), 4000);
+
+      const el = document.getElementById(SECTION_IDS[firstIncomplete]);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Flash the section
+        el.classList.add('ring-2', 'ring-warning', 'ring-offset-2');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-warning', 'ring-offset-2'), 2000);
+      }
+    }
+  }, [allComplete, status, onNavigateToReview]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 md:pb-0">
-      <Header onSave={handleSave} onLoad={handleLoad} onExportPdf={exportPdf} />
+    <>
+      <Header />
 
-      {showLoadModal && savedProjects.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Load Project</h3>
-              <button onClick={() => setShowLoadModal(false)} className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Close</button>
-            </div>
-            <div className="space-y-1">
-              {savedProjects.map((p) => (
-                <button
-                  key={p.name}
-                  onClick={() => {
-                    const loaded = loadProject(p.name);
-                    if (loaded) dispatch({ type: 'LOAD_PROJECT', payload: loaded });
-                    setShowLoadModal(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300"
-                >
-                  {p.name}
-                  <span className="text-xs text-gray-400 ml-2">{new Date(p.savedAt).toLocaleDateString()}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div id={SECTION_IDS.projectSetup} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Project Setup" icon={<Settings className="w-5 h-5" />} defaultOpen={true} status={status.projectSetup}>
+            <ProjectSetupPanel />
+          </SectionWrapper>
         </div>
-      )}
 
-      <main ref={contentRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
-        <SectionWrapper title="Project Setup" icon={<Settings className="w-5 h-5" />} defaultOpen={true}>
-          <ProjectSetupPanel />
-        </SectionWrapper>
+        <div id={SECTION_IDS.materials} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Amino Acid & Starting Materials" icon={<FlaskRound className="w-5 h-5" />} defaultOpen={true} status={status.materials}>
+            <MaterialsCalculator />
+          </SectionWrapper>
+        </div>
 
-        <SectionWrapper title="Amino Acid & Starting Materials" icon={<FlaskRound className="w-5 h-5" />}>
-          <MaterialsCalculator />
-        </SectionWrapper>
+        <div id={SECTION_IDS.otherMaterials} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Other Materials & Consumables" icon={<Beaker className="w-5 h-5" />} defaultOpen={true} status={status.otherMaterials}>
+            <OtherMaterialsCalculator />
+          </SectionWrapper>
+        </div>
 
-        <SectionWrapper title="Machine / Equipment" icon={<Cpu className="w-5 h-5" />} defaultOpen={false}>
-          <MachineCalculator />
-        </SectionWrapper>
+        <div id={SECTION_IDS.machines} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Machine / Equipment" icon={<Cpu className="w-5 h-5" />} defaultOpen={true} status={status.machines}>
+            <MachineCalculator />
+          </SectionWrapper>
+        </div>
 
-        <SectionWrapper title="Labor" icon={<Users className="w-5 h-5" />} defaultOpen={false}>
-          <LaborCalculator />
-        </SectionWrapper>
+        <div id={SECTION_IDS.labor} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Labor" icon={<Users className="w-5 h-5" />} defaultOpen={true} status={status.labor}>
+            <LaborCalculator />
+          </SectionWrapper>
+        </div>
 
-        <SectionWrapper title="Cost Summary" icon={<BarChart3 className="w-5 h-5" />} defaultOpen={true}>
-          <CostSummaryDashboard />
-        </SectionWrapper>
+        <div id={SECTION_IDS.timeline} className="scroll-mt-20 rounded-xl transition-all duration-300">
+          <SectionWrapper title="Capacity Timeline" icon={<Calendar className="w-5 h-5" />} defaultOpen={true} status={status.timeline}>
+            <CapacityTimeline />
+          </SectionWrapper>
+        </div>
 
-        <SectionWrapper title="Capacity Timeline" icon={<Calendar className="w-5 h-5" />} defaultOpen={false}>
-          <CapacityTimeline />
-        </SectionWrapper>
-
-        <SectionWrapper title="Export & Share" icon={<Share2 className="w-5 h-5" />} defaultOpen={false}>
-          <ExportPanel onExportPdf={exportPdf} />
-        </SectionWrapper>
+        {/* Review button */}
+        <div className="pt-4">
+          {warning && (
+            <div className="mb-3 flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {warning}
+            </div>
+          )}
+          <button
+            onClick={handleReviewClick}
+            className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold rounded-xl transition-colors ${
+              allComplete
+                ? 'text-white bg-accent-500 hover:bg-accent-600 shadow-lg shadow-accent-500/25'
+                : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600'
+            }`}
+          >
+            <ClipboardCheck className="w-5 h-5" />
+            Review Cost Summary
+          </button>
+        </div>
       </main>
 
       <MobileSummaryBar />
+    </>
+  );
+}
+
+function AppContent() {
+  const [page, setPage] = useState<Page>('builder');
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 md:pb-0">
+      {page === 'builder' ? (
+        <BuilderPage onNavigateToReview={() => { setPage('review'); window.scrollTo(0, 0); }} />
+      ) : (
+        <ReviewPage onBack={() => { setPage('builder'); window.scrollTo(0, 0); }} onEditSection={(section: SectionKey) => {
+          setPage('builder');
+          requestAnimationFrame(() => {
+            const el = document.getElementById(SECTION_IDS[section]);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }} />
+      )}
     </div>
   );
 }

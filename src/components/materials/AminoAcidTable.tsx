@@ -61,7 +61,7 @@ export default function AminoAcidTable() {
                   className="w-20 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
                   min={0}
                   step={0.1}
-                  value={aa.costPerGram}
+                  value={aa.costPerGram || ''}
                   onChange={(e) =>
                     dispatch({
                       type: 'UPDATE_AA_COST',

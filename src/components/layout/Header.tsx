@@ -1,5 +1,5 @@
-import { Sun, Moon, FlaskConical } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { FlaskConical } from 'lucide-react';
+import { ToggleTheme } from '@/components/ui/toggle-theme';
 
 interface HeaderProps {
   onSave?: () => void;
@@ -7,9 +7,7 @@ interface HeaderProps {
   onExportPdf?: () => void;
 }
 
-export default function Header({ onSave, onLoad, onExportPdf }: HeaderProps) {
-  const { theme, toggleTheme } = useTheme();
-
+export default function Header({ onSave, onLoad, onExportPdf }: HeaderProps = {}) {
   return (
     <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -52,13 +50,7 @@ export default function Header({ onSave, onLoad, onExportPdf }: HeaderProps) {
               Export PDF
             </button>
           )}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            aria-label="Toggle dark mode"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <ToggleTheme />
         </div>
       </div>
     </header>

@@ -9,6 +9,7 @@ export async function copySummaryToClipboard(state: ProjectState): Promise<void>
     state.resinCostPerGram,
     grams,
     state.customMaterials,
+    state.otherMaterials,
   );
   const totalMaterials = materials.totalMaterialsCost * state.batchCount;
   const machines = calculateMachineCost(state.machines, state.batchCount);
@@ -34,6 +35,7 @@ export async function copySummaryToClipboard(state: ProjectState): Promise<void>
     `  Coupling:     ${formatCurrency(materials.couplingCost * state.batchCount)}`,
     `  Resin:        ${formatCurrency(materials.resinCost * state.batchCount)}`,
     `  Custom:       ${formatCurrency(materials.customCost * state.batchCount)}`,
+    `  Other Mat.:   ${formatCurrency(materials.otherMaterialsCost * state.batchCount)}`,
     `Equipment:      ${formatCurrency(machines.totalMachineCost)}`,
     `Labor:          ${formatCurrency(labor.totalLaborCost)}`,
     ``,
