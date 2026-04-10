@@ -82,7 +82,7 @@ function useProjectStatus(): SectionStatuses {
 function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void }) {
   const status = useProjectStatus();
   const [warning, setWarning] = useState<string | null>(null);
-  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const allComplete = Object.values(status).every((s) => s === 'complete');
 
