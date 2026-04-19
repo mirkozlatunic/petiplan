@@ -1,19 +1,14 @@
-import { ArrowLeft, Pencil, DollarSign, Package, Scale, Download, Copy, Save, FolderOpen, Trash2, Check, Camera, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, Pencil, DollarSign, Package, Scale, Download, Copy, Save, FolderOpen, Trash2, Check, Camera } from 'lucide-react';
 import { useState } from 'react';
 import { useProjectState, useProjectDispatch } from '../../context/ProjectContext';
-import {
-  scaleToGrams,
-  calculateMaterialsCost,
-  calculateMachineCost,
-  calculateLaborCost,
-  calculateTotalCost,
-  calculateMargin,
-} from '../../utils/costCalculator';
+import { useProjectCosts } from '../../hooks/useProjectCosts';
+import { calculateMargin } from '../../utils/costCalculator';
 import { formatCurrency, formatPercent, formatDate } from '../../utils/formatters';
 import { copySummaryToClipboard } from '../../utils/clipboard';
 import { saveProject, listSavedProjects, loadProject, deleteProject } from '../../utils/storage';
 import { usePdfExport } from '../../hooks/usePdfExport';
 import CostPieChart from '../dashboard/CostPieChart';
+import Delta from '../ui/Delta';
 import Header from '../layout/Header';
 import Card from '../ui/Card';
 import type { SectionKey } from '../../App';
@@ -30,6 +25,7 @@ function SectionHeader({ title, sectionKey, onEdit }: { title: string; sectionKe
       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{title}</h3>
       <button
         onClick={() => onEdit(sectionKey)}
+        aria-label={`Edit ${title}`}
         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 rounded-lg hover:bg-accent-100 dark:hover:bg-accent-900/40 transition-colors"
       >
         <Pencil className="w-3 h-3" />
@@ -48,51 +44,20 @@ function LineItem({ label, value, indent = false }: { label: string; value: stri
   );
 }
 
-function Delta({ current, previous, label }: { current: number; previous: number; label: string }) {
-  const diff = current - previous;
-  const pct = previous > 0 ? (diff / previous) * 100 : 0;
-  const isUp = diff > 0;
-
-  return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      <span className={`flex items-center gap-1 font-medium ${isUp ? 'text-danger' : 'text-success'}`}>
-        {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-        {isUp ? '+' : ''}{formatCurrency(diff)} ({isUp ? '+' : ''}{formatPercent(pct)})
-      </span>
-    </div>
-  );
-}
+const btnClass = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors';
 
 export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
   const state = useProjectState();
   const dispatch = useProjectDispatch();
   const { contentRef, exportPdf } = usePdfExport();
+  const { materialsCost, machineCost, laborCost, totalMaterials, totals } = useProjectCosts();
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [projects, setProjects] = useState<SavedProject[]>([]);
 
-  const grams = scaleToGrams(state.scale, state.customScaleGrams);
-  const materialsCost = calculateMaterialsCost(
-    state.parsedAminoAcids,
-    state.resinCostPerGram,
-    grams,
-    state.customMaterials,
-    state.otherMaterials,
-  );
-  const machineCost = calculateMachineCost(state.machines, state.batchCount);
-  const laborCost = calculateLaborCost(state.laborRoles, state.batchCount);
-  const totalMaterials = materialsCost.totalMaterialsCost * state.batchCount;
-  const totals = calculateTotalCost(
-    totalMaterials,
-    machineCost.totalMachineCost,
-    laborCost.totalLaborCost,
-    state.batchCount,
-    grams,
-  );
-  const margin = calculateMargin(totals.totalCost, state.sellingPricePerGram, grams, state.batchCount);
+  const margin = calculateMargin(totals.totalCost, state.sellingPricePerGram, totals.deliverableGrams, state.batchCount);
 
   const handleCopy = async () => {
     await copySummaryToClipboard(state);
@@ -118,6 +83,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
   };
 
   const handleDelete = (name: string) => {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
     deleteProject(name);
     setProjects(listSavedProjects());
   };
@@ -137,9 +103,6 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
     });
   };
 
-  const btnClass =
-    'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors';
-
   return (
     <>
       <Header />
@@ -149,6 +112,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
+            aria-label="Back to builder"
             className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -157,6 +121,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Cost Review</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {state.projectName} &mdash; {state.batchCount} batch{state.batchCount !== 1 ? 'es' : ''} at {state.scale === 'custom' ? `${state.customScaleGrams}g` : state.scale} &middot; {state.gmpStatus === 'gmp' ? 'GMP' : 'Non-GMP'}
+              {totals.cumulativeYield < 1 && ` · ${Math.round(totals.cumulativeYield * 100)}% cumulative yield`}
             </p>
           </div>
         </div>
@@ -165,7 +130,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-4 rounded-lg border border-accent-300 dark:border-accent-700 bg-accent-50 dark:bg-accent-900/20">
             <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Project Cost</span>
             </div>
             <p className="text-2xl font-bold text-accent-600 dark:text-accent-400">{formatCurrency(totals.totalCost)}</p>
@@ -173,18 +138,20 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
           </div>
           <div className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
             <div className="flex items-center gap-2 mb-1">
-              <Package className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Package className="w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Cost per Batch</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totals.costPerBatch)}</p>
           </div>
           <div className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
             <div className="flex items-center gap-2 mb-1">
-              <Scale className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-              <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Cost per Gram</span>
+              <Scale className="w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+              <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Cost per Gram (delivered)</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totals.costPerGram)}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{grams * state.batchCount}g total output</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {(totals.deliverableGrams * state.batchCount).toFixed(1)}g deliverable · {Math.round(totals.cumulativeYield * 100)}% yield
+            </p>
           </div>
         </div>
 
@@ -207,15 +174,16 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Margin Calculator</h3>
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sell Price ($/g)</label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sell Price ($/g deliverable)</label>
                     <input
                       type="number"
+                      aria-label="Selling price per gram of deliverable product"
                       className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
                       min={0}
-                      step={1}
+                      step={0.01}
                       value={state.sellingPricePerGram || ''}
                       placeholder="0.00"
-                      onChange={(e) => dispatch({ type: 'SET_SELLING_PRICE', payload: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => dispatch({ type: 'SET_SELLING_PRICE', payload: Math.max(0, parseFloat(e.target.value) || 0) })}
                     />
                   </div>
                   {state.sellingPricePerGram > 0 && (
@@ -244,6 +212,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Comparison</h3>
                   <button
                     onClick={handleSaveSnapshot}
+                    aria-label="Save cost snapshot for comparison"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 rounded-lg hover:bg-accent-100 dark:hover:bg-accent-900/40 transition-colors"
                   >
                     <Camera className="w-3.5 h-3.5" />
@@ -252,12 +221,12 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                 </div>
                 {state.previousSnapshot ? (
                   <div className="space-y-1.5">
-                    <Delta current={totals.totalCost} previous={state.previousSnapshot.totalCost} label="Total Cost" />
-                    <Delta current={totalMaterials} previous={state.previousSnapshot.materialsCost} label="Materials" />
-                    <Delta current={machineCost.totalMachineCost} previous={state.previousSnapshot.machineCost} label="Equipment" />
-                    <Delta current={laborCost.totalLaborCost} previous={state.previousSnapshot.laborCost} label="Labor" />
-                    <Delta current={totals.costPerBatch} previous={state.previousSnapshot.costPerBatch} label="Cost / Batch" />
-                    <Delta current={totals.costPerGram} previous={state.previousSnapshot.costPerGram} label="Cost / Gram" />
+                    <Delta current={totals.totalCost}              previous={state.previousSnapshot.totalCost}    label="Total Cost" />
+                    <Delta current={totalMaterials}                previous={state.previousSnapshot.materialsCost} label="Materials" />
+                    <Delta current={machineCost.totalMachineCost}  previous={state.previousSnapshot.machineCost}  label="Equipment" />
+                    <Delta current={laborCost.totalLaborCost}      previous={state.previousSnapshot.laborCost}    label="Labor" />
+                    <Delta current={totals.costPerBatch}           previous={state.previousSnapshot.costPerBatch}  label="Cost / Batch" />
+                    <Delta current={totals.costPerGram}            previous={state.previousSnapshot.costPerGram}   label="Cost / Gram" />
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 dark:text-gray-500 italic">Save a snapshot to compare against future changes.</p>
@@ -278,12 +247,16 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
               <SectionHeader title="Project Setup" sectionKey="projectSetup" onEdit={onEditSection} />
               <div className="divide-y divide-gray-100 dark:divide-slate-700">
                 <LineItem label="Project Name" value={state.projectName} />
-                <LineItem label="GMP Classification" value={state.gmpStatus === 'gmp' ? 'GMP' : 'Non-GMP'} />
+                <LineItem label="GMP Classification" value={state.gmpStatus === 'gmp' ? 'GMP (+15% labor overhead)' : 'Non-GMP'} />
                 <LineItem label="Sequence" value={`${state.sequence.substring(0, 30)}${state.sequence.length > 30 ? '...' : ''} (${state.parsedAminoAcids.reduce((s, a) => s + a.count, 0)} residues)`} />
                 <LineItem label="Batches" value={`${state.batchCount}`} />
                 <LineItem label="Scale" value={state.scale === 'custom' ? `${state.customScaleGrams}g` : state.scale} />
+                <LineItem label="Cumulative Yield" value={`${(totals.cumulativeYield * 100).toFixed(1)}% → ${totals.deliverableGrams.toFixed(2)}g deliverable/batch`} />
                 <LineItem label="Start Date" value={formatDate(state.startDate)} />
                 <LineItem label="Target End Date" value={formatDate(state.targetEndDate)} />
+                {state.ptmModifications.length > 0 && (
+                  <LineItem label="PTM Modifications" value={state.ptmModifications.map(p => p.name).join(', ')} />
+                )}
               </div>
             </div>
 
@@ -302,9 +275,12 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                 {state.customMaterials.map((m) => (
                   <LineItem key={m.id} label={`${m.name} — ${m.quantity} ${m.unit}`} value={formatCurrency(m.subtotal)} indent />
                 ))}
+                {materialsCost.ptmCost > 0 && (
+                  <LineItem label={`PTM Modifications (${state.ptmModifications.map(p => p.name).join(', ')})`} value={formatCurrency(materialsCost.ptmCost)} indent />
+                )}
                 <div className="flex items-center justify-between py-2 font-semibold">
                   <span className="text-sm text-gray-900 dark:text-gray-100">Materials Total (per batch)</span>
-                  <span className="text-sm text-primary-500">{formatCurrency(materialsCost.aaCost + materialsCost.couplingCost + materialsCost.resinCost + materialsCost.customCost)}</span>
+                  <span className="text-sm text-primary-500">{formatCurrency(materialsCost.aaCost + materialsCost.couplingCost + materialsCost.resinCost + materialsCost.customCost + materialsCost.ptmCost)}</span>
                 </div>
               </div>
             </div>
@@ -347,9 +323,12 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
             <div className="py-3">
               <SectionHeader title="Labor" sectionKey="labor" onEdit={onEditSection} />
               <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                {state.laborRoles.map((r) => (
-                  <LineItem key={r.id} label={`${r.name} — ${r.hoursPerBatch}h/batch × ${r.headcount} @ ${formatCurrency(r.hourlyRate)}/h (${r.fte.toFixed(2)} FTE)`} value={formatCurrency(r.costPerBatch)} indent />
+                {laborCost.perRole.map((r) => (
+                  <LineItem key={r.id} label={`${r.name} — ${formatCurrency(r.totalCost / state.batchCount)}/batch`} value={formatCurrency(r.totalCost)} indent />
                 ))}
+                {state.gmpStatus === 'gmp' && laborCost.gmpOverheadCost > 0 && (
+                  <LineItem label="GMP Documentation Overhead (15%)" value={formatCurrency(laborCost.gmpOverheadCost)} indent />
+                )}
                 <div className="flex items-center justify-between py-2 font-semibold">
                   <span className="text-sm text-gray-900 dark:text-gray-100">Labor Total ({state.batchCount} batches)</span>
                   <span className="text-sm text-primary-500">{formatCurrency(laborCost.totalLaborCost)}</span>
@@ -410,7 +389,11 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleLoad(p.name)} className="px-3 py-1 text-xs font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 rounded hover:bg-accent-100 dark:hover:bg-accent-900/40 transition-colors">Load</button>
-                          <button onClick={() => handleDelete(p.name)} className="p-1 text-gray-400 hover:text-danger transition-colors">
+                          <button
+                            onClick={() => handleDelete(p.name)}
+                            aria-label={`Delete project ${p.name}`}
+                            className="p-1 text-gray-400 hover:text-danger transition-colors"
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>

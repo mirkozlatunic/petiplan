@@ -13,7 +13,10 @@ export function detectBottleneck(machines: Machine[]): BottleneckResult | null {
   let worstEffective = 0;
 
   for (const m of machines) {
-    const effective = m.hoursPerBatch / (m.unitsAvailable * m.utilization || 1);
+    // Guard against division by zero: machines with 0 utilization are excluded from bottleneck detection
+    const denominator = m.unitsAvailable * m.utilization;
+    if (denominator <= 0) continue;
+    const effective = m.hoursPerBatch / denominator;
     if (effective > worstEffective) {
       worstEffective = effective;
       worst = m;
@@ -49,9 +52,15 @@ export function generateTimeline(
   targetEndDate: string,
 ): { batches: BatchTimeline[]; totalDays: number; exceedsTarget: boolean } {
   const totalPhaseDays = phases.reduce((sum, p) => sum + p.daysPerBatch, 0);
-  const targetDays = targetEndDate && startDate
-    ? Math.ceil((new Date(targetEndDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
-    : Infinity;
+
+  // Only compute targetDays when both dates are present and valid
+  let targetDays: number | null = null;
+  if (targetEndDate && startDate) {
+    const diff = Math.ceil(
+      (new Date(targetEndDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diff > 0) targetDays = diff;
+  }
 
   const batches: BatchTimeline[] = [];
   for (let i = 0; i < batchCount; i++) {
@@ -67,7 +76,7 @@ export function generateTimeline(
         startDay: dayOffset,
         endDay,
         color: phase.color,
-        exceedsTarget: endDay > targetDays,
+        exceedsTarget: targetDays !== null ? endDay > targetDays : false,
       });
       dayOffset = endDay;
     }
@@ -78,7 +87,7 @@ export function generateTimeline(
   return {
     batches,
     totalDays,
-    exceedsTarget: totalDays > targetDays,
+    exceedsTarget: targetDays !== null ? totalDays > targetDays : false,
   };
 }
 

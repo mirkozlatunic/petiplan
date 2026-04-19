@@ -1,33 +1,8 @@
-import { useProjectState } from '../../context/ProjectContext';
-import {
-  scaleToGrams,
-  calculateMaterialsCost,
-  calculateMachineCost,
-  calculateLaborCost,
-  calculateTotalCost,
-} from '../../utils/costCalculator';
+import { useProjectCosts } from '../../hooks/useProjectCosts';
 import { formatCurrencyCompact } from '../../utils/formatters';
 
 export default function MobileSummaryBar() {
-  const state = useProjectState();
-  const grams = scaleToGrams(state.scale, state.customScaleGrams);
-  const materials = calculateMaterialsCost(
-    state.parsedAminoAcids,
-    state.resinCostPerGram,
-    grams,
-    state.customMaterials,
-    state.otherMaterials,
-  );
-  const totalMaterials = materials.totalMaterialsCost * state.batchCount;
-  const machines = calculateMachineCost(state.machines, state.batchCount);
-  const labor = calculateLaborCost(state.laborRoles, state.batchCount);
-  const totals = calculateTotalCost(
-    totalMaterials,
-    machines.totalMachineCost,
-    labor.totalLaborCost,
-    state.batchCount,
-    grams,
-  );
+  const { totals } = useProjectCosts();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-primary-500 text-white border-t border-primary-400 shadow-lg">

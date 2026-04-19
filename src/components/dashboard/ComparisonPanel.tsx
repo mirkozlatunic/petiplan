@@ -1,6 +1,6 @@
-import { Camera, TrendingUp, TrendingDown } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import type { CostSnapshot } from '../../types';
-import { formatCurrency, formatPercent } from '../../utils/formatters';
+import Delta from '../ui/Delta';
 
 interface ComparisonPanelProps {
   currentCost: number;
@@ -11,22 +11,6 @@ interface ComparisonPanelProps {
   costPerGram: number;
   previousSnapshot: CostSnapshot | null;
   onSaveSnapshot: () => void;
-}
-
-function Delta({ current, previous, label }: { current: number; previous: number; label: string }) {
-  const diff = current - previous;
-  const pct = previous > 0 ? (diff / previous) * 100 : 0;
-  const isUp = diff > 0;
-
-  return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      <span className={`flex items-center gap-1 font-medium ${isUp ? 'text-danger' : 'text-success'}`}>
-        {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-        {isUp ? '+' : ''}{formatCurrency(diff)} ({isUp ? '+' : ''}{formatPercent(pct)})
-      </span>
-    </div>
-  );
 }
 
 export default function ComparisonPanel({
@@ -47,6 +31,7 @@ export default function ComparisonPanel({
         </h4>
         <button
           onClick={onSaveSnapshot}
+          aria-label="Save cost snapshot for comparison"
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 rounded-lg hover:bg-accent-100 dark:hover:bg-accent-900/40 transition-colors"
         >
           <Camera className="w-3.5 h-3.5" />
@@ -56,12 +41,12 @@ export default function ComparisonPanel({
 
       {previousSnapshot ? (
         <div className="space-y-1.5">
-          <Delta current={currentCost} previous={previousSnapshot.totalCost} label="Total Cost" />
+          <Delta current={currentCost}    previous={previousSnapshot.totalCost}    label="Total Cost" />
           <Delta current={currentMaterials} previous={previousSnapshot.materialsCost} label="Materials" />
-          <Delta current={currentMachine} previous={previousSnapshot.machineCost} label="Equipment" />
-          <Delta current={currentLabor} previous={previousSnapshot.laborCost} label="Labor" />
-          <Delta current={costPerBatch} previous={previousSnapshot.costPerBatch} label="Cost / Batch" />
-          <Delta current={costPerGram} previous={previousSnapshot.costPerGram} label="Cost / Gram" />
+          <Delta current={currentMachine}  previous={previousSnapshot.machineCost}  label="Equipment" />
+          <Delta current={currentLabor}    previous={previousSnapshot.laborCost}    label="Labor" />
+          <Delta current={costPerBatch}    previous={previousSnapshot.costPerBatch}  label="Cost / Batch" />
+          <Delta current={costPerGram}     previous={previousSnapshot.costPerGram}   label="Cost / Gram" />
         </div>
       ) : (
         <p className="text-xs text-gray-400 dark:text-gray-500 italic">

@@ -19,17 +19,25 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
     dispatch({ type: 'UPDATE_LABOR_ROLE', payload: { id: role.id, updates } });
   };
 
+  const handleDelete = () => {
+    if (window.confirm(`Remove "${role.name}"? This cannot be undone.`)) {
+      dispatch({ type: 'REMOVE_LABOR_ROLE', payload: role.id });
+    }
+  };
+
   return (
     <div className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
       <div className="flex items-start justify-between mb-3">
         <input
           type="text"
+          aria-label="Role name"
           className="text-sm font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-gray-100"
           value={role.name}
           onChange={(e) => update({ name: e.target.value })}
         />
         <button
-          onClick={() => dispatch({ type: 'REMOVE_LABOR_ROLE', payload: role.id })}
+          onClick={handleDelete}
+          aria-label={`Remove ${role.name}`}
           className="p-1 text-gray-400 hover:text-danger transition-colors"
         >
           <Trash2 className="w-4 h-4" />
@@ -45,7 +53,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             min={0}
             step={1}
             value={role.hourlyRate || ''}
-            onChange={(e) => update({ hourlyRate: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => update({ hourlyRate: Math.max(0, parseFloat(e.target.value) || 0) })}
           />
         </div>
         <div>
@@ -56,7 +64,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             min={0}
             step={1}
             value={role.hoursPerBatch || ''}
-            onChange={(e) => update({ hoursPerBatch: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => update({ hoursPerBatch: Math.max(0, parseFloat(e.target.value) || 0) })}
           />
         </div>
         <div>
@@ -67,7 +75,7 @@ export default function LaborRoleCard({ role }: LaborRoleCardProps) {
             min={1}
             step={1}
             value={role.headcount || ''}
-            onChange={(e) => update({ headcount: parseInt(e.target.value) || 1 })}
+            onChange={(e) => update({ headcount: Math.max(1, parseInt(e.target.value) || 1) })}
           />
         </div>
       </div>

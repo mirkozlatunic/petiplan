@@ -1,12 +1,6 @@
 import { DollarSign, Package, Scale } from 'lucide-react';
 import { useProjectState, useProjectDispatch } from '../../context/ProjectContext';
-import {
-  scaleToGrams,
-  calculateMaterialsCost,
-  calculateMachineCost,
-  calculateLaborCost,
-  calculateTotalCost,
-} from '../../utils/costCalculator';
+import { useProjectCosts } from '../../hooks/useProjectCosts';
 import { formatCurrency } from '../../utils/formatters';
 import KpiCard from './KpiCard';
 import CostPieChart from './CostPieChart';
@@ -16,26 +10,7 @@ import ComparisonPanel from './ComparisonPanel';
 export default function CostSummaryDashboard() {
   const state = useProjectState();
   const dispatch = useProjectDispatch();
-
-  const grams = scaleToGrams(state.scale, state.customScaleGrams);
-  const materialsCost = calculateMaterialsCost(
-    state.parsedAminoAcids,
-    state.resinCostPerGram,
-    grams,
-    state.customMaterials,
-    state.otherMaterials,
-  );
-  const machineCost = calculateMachineCost(state.machines, state.batchCount);
-  const laborCost = calculateLaborCost(state.laborRoles, state.batchCount);
-
-  const totalMaterials = materialsCost.totalMaterialsCost * state.batchCount;
-  const totals = calculateTotalCost(
-    totalMaterials,
-    machineCost.totalMachineCost,
-    laborCost.totalLaborCost,
-    state.batchCount,
-    grams,
-  );
+  const { machineCost, laborCost, totalMaterials, totals } = useProjectCosts();
 
   const handleSaveSnapshot = () => {
     dispatch({
@@ -68,10 +43,10 @@ export default function CostSummaryDashboard() {
           icon={<Package className="w-4 h-4" />}
         />
         <KpiCard
-          label="Cost per Gram"
+          label="Cost per Gram (delivered)"
           value={formatCurrency(totals.costPerGram)}
           icon={<Scale className="w-4 h-4" />}
-          subtitle={`${grams * state.batchCount}g total output`}
+          subtitle={`${(totals.deliverableGrams * state.batchCount).toFixed(1)}g deliverable · ${Math.round(totals.cumulativeYield * 100)}% yield`}
         />
       </div>
 
@@ -82,7 +57,7 @@ export default function CostSummaryDashboard() {
           laborCost={laborCost.totalLaborCost}
         />
         <div className="space-y-4">
-          <MarginCalculator totalCost={totals.totalCost} />
+          <MarginCalculator totalCost={totals.totalCost} deliverableGrams={totals.deliverableGrams} />
           <ComparisonPanel
             currentCost={totals.totalCost}
             currentMaterials={totalMaterials}
@@ -95,6 +70,19 @@ export default function CostSummaryDashboard() {
           />
         </div>
       </div>
+
+      {state.gmpStatus === 'gmp' && laborCost.gmpOverheadCost > 0 && (
+        <div className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-800 dark:text-blue-300">
+          GMP mode: labor costs include a 15% overhead (+{formatCurrency(laborCost.gmpOverheadCost)}) for documentation and quality assurance.
+        </div>
+      )}
+
+      {totals.cumulativeYield < 1 && (
+        <div className="px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+          Cumulative yield: {(totals.cumulativeYield * 100).toFixed(1)}% — cost/gram is calculated on {(totals.deliverableGrams * state.batchCount).toFixed(1)}g deliverable product (not input grams).
+          Adjust phase yields in the Capacity Timeline section.
+        </div>
+      )}
     </div>
   );
 }

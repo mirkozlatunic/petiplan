@@ -1,7 +1,7 @@
-import type { ProjectState, ScaleOption, GmpStatus, AminoAcidEntry, CustomMaterial, Machine, LaborRole, CostSnapshot, Phase } from '../types';
+import type { ProjectState, ScaleOption, GmpStatus, AminoAcidEntry, CustomMaterial, Machine, LaborRole, CostSnapshot, Phase, PtmModification } from '../types';
 import { parseSequence, recalcAminoAcid } from '../utils/sequenceParser';
 import { scaleToGrams } from '../utils/costCalculator';
-import { DEFAULT_PHASES } from '../constants/phaseDefaults';
+import { DEFAULT_PHASES, DEFAULT_YIELD_BY_PHASE } from '../constants/phaseDefaults';
 
 export const initialState: ProjectState = {
   projectName: '',
@@ -22,6 +22,7 @@ export const initialState: ProjectState = {
   phases: DEFAULT_PHASES,
   previousSnapshot: null,
   sellingPricePerGram: 0,
+  ptmModifications: [],
 };
 
 export type ProjectAction =
@@ -49,8 +50,11 @@ export type ProjectAction =
   | { type: 'UPDATE_LABOR_ROLE'; payload: { id: string; updates: Partial<LaborRole> } }
   | { type: 'REMOVE_LABOR_ROLE'; payload: string }
   | { type: 'UPDATE_PHASE'; payload: { phase: Phase; daysPerBatch: number } }
+  | { type: 'UPDATE_PHASE_YIELD'; payload: { phase: Phase; yieldPercent: number } }
   | { type: 'SAVE_SNAPSHOT'; payload: CostSnapshot }
   | { type: 'SET_SELLING_PRICE'; payload: number }
+  | { type: 'ADD_PTM'; payload: Omit<PtmModification, 'id'> }
+  | { type: 'REMOVE_PTM'; payload: string }
   | { type: 'LOAD_PROJECT'; payload: ProjectState }
   | { type: 'RESET_PROJECT' };
 
@@ -58,11 +62,14 @@ function reparse(state: ProjectState): AminoAcidEntry[] {
   const grams = scaleToGrams(state.scale, state.customScaleGrams);
   const result = parseSequence(state.sequence, grams, state.couplingExcessFactor);
 
+  // O(n) lookup with a Map instead of O(n²) Array.find
+  const costMap = new Map(state.parsedAminoAcids.map((e) => [e.code, e.costPerGram]));
+
   return result.entries.map((newEntry) => {
-    const existing = state.parsedAminoAcids.find((e) => e.code === newEntry.code);
-    if (existing) {
+    const existingCost = costMap.get(newEntry.code);
+    if (existingCost !== undefined) {
       return recalcAminoAcid(
-        { ...newEntry, costPerGram: existing.costPerGram },
+        { ...newEntry, costPerGram: existingCost },
         grams,
         state.couplingExcessFactor,
       );
@@ -72,15 +79,15 @@ function reparse(state: ProjectState): AminoAcidEntry[] {
 }
 
 function computeMachineCost(m: Partial<Machine> & { hourlyCost: number; hoursPerBatch: number }): number {
-  return m.hourlyCost * m.hoursPerBatch;
+  return Math.max(0, m.hourlyCost) * Math.max(0, m.hoursPerBatch);
 }
 
 function computeLaborCost(r: Partial<LaborRole> & { hourlyRate: number; hoursPerBatch: number; headcount: number }): number {
-  return r.hourlyRate * r.hoursPerBatch * r.headcount;
+  return Math.max(0, r.hourlyRate) * Math.max(0, r.hoursPerBatch) * Math.max(1, r.headcount);
 }
 
 function computeFte(r: { hoursPerBatch: number; headcount: number }, batchCount: number): number {
-  return (r.hoursPerBatch * r.headcount * batchCount) / 2080;
+  return (Math.max(0, r.hoursPerBatch) * Math.max(1, r.headcount) * batchCount) / 2080;
 }
 
 export function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
@@ -98,7 +105,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     }
 
     case 'SET_BATCH_COUNT': {
-      const newState = { ...state, batchCount: Math.max(1, action.payload) };
+      const newState = { ...state, batchCount: Math.max(1, Math.floor(action.payload)) };
       newState.laborRoles = newState.laborRoles.map((r) => ({
         ...r,
         fte: computeFte(r, newState.batchCount),
@@ -113,7 +120,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     }
 
     case 'SET_CUSTOM_SCALE': {
-      const newState = { ...state, customScaleGrams: Math.max(0.1, action.payload) };
+      const newState = { ...state, customScaleGrams: Math.max(0.1, Math.min(1_000_000, action.payload)) };
       newState.parsedAminoAcids = reparse(newState);
       return newState;
     }
@@ -125,7 +132,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       return { ...state, targetEndDate: action.payload };
 
     case 'SET_COUPLING_EXCESS_FACTOR': {
-      const newState = { ...state, couplingExcessFactor: Math.max(1, action.payload) };
+      const newState = { ...state, couplingExcessFactor: Math.max(1, Math.min(100, action.payload)) };
       newState.parsedAminoAcids = reparse(newState);
       return newState;
     }
@@ -137,7 +144,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           if (aa.code === action.payload.code) {
             const grams = scaleToGrams(state.scale, state.customScaleGrams);
             return recalcAminoAcid(
-              { ...aa, costPerGram: action.payload.costPerGram },
+              { ...aa, costPerGram: Math.max(0, action.payload.costPerGram) },
               grams,
               state.couplingExcessFactor,
             );
@@ -149,7 +156,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     }
 
     case 'SET_RESIN_COST':
-      return { ...state, resinCostPerGram: action.payload };
+      return { ...state, resinCostPerGram: Math.max(0, action.payload) };
 
     case 'ADD_CUSTOM_MATERIAL': {
       const newMaterial: CustomMaterial = {
@@ -296,14 +303,47 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       return { ...state, phases: newPhases, machines: syncedMachines };
     }
 
+    case 'UPDATE_PHASE_YIELD': {
+      const clampedYield = Math.max(0, Math.min(100, action.payload.yieldPercent));
+      return {
+        ...state,
+        phases: state.phases.map((p) =>
+          p.phase === action.payload.phase ? { ...p, yieldPercent: clampedYield } : p,
+        ),
+      };
+    }
+
     case 'SAVE_SNAPSHOT':
       return { ...state, previousSnapshot: action.payload };
 
     case 'SET_SELLING_PRICE':
-      return { ...state, sellingPricePerGram: action.payload };
+      return { ...state, sellingPricePerGram: Math.max(0, action.payload) };
 
-    case 'LOAD_PROJECT':
-      return { ...initialState, ...action.payload };
+    case 'ADD_PTM': {
+      const newPtm: PtmModification = {
+        ...action.payload,
+        id: crypto.randomUUID(),
+      };
+      return { ...state, ptmModifications: [...state.ptmModifications, newPtm] };
+    }
+
+    case 'REMOVE_PTM':
+      return { ...state, ptmModifications: state.ptmModifications.filter((p) => p.id !== action.payload) };
+
+    case 'LOAD_PROJECT': {
+      const loaded = action.payload;
+      // Migrate old saves: ensure phases have yieldPercent and ptmModifications exists
+      const migratedPhases = loaded.phases.map((p) => ({
+        ...p,
+        yieldPercent: p.yieldPercent ?? DEFAULT_YIELD_BY_PHASE[p.phase] ?? 95,
+      }));
+      return {
+        ...initialState,
+        ...loaded,
+        phases: migratedPhases,
+        ptmModifications: loaded.ptmModifications ?? [],
+      };
+    }
 
     case 'RESET_PROJECT':
       return initialState;

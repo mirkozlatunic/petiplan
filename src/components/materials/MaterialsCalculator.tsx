@@ -1,5 +1,5 @@
 import { useProjectState } from '../../context/ProjectContext';
-import { scaleToGrams, calculateMaterialsCost } from '../../utils/costCalculator';
+import { useProjectCosts } from '../../hooks/useProjectCosts';
 import { formatCurrency } from '../../utils/formatters';
 import AminoAcidTable from './AminoAcidTable';
 import CouplingResinSummary from './CouplingResinSummary';
@@ -7,14 +7,7 @@ import CustomLineItem from './CustomLineItem';
 
 export default function MaterialsCalculator() {
   const state = useProjectState();
-  const grams = scaleToGrams(state.scale, state.customScaleGrams);
-  const costs = calculateMaterialsCost(
-    state.parsedAminoAcids,
-    state.resinCostPerGram,
-    grams,
-    state.customMaterials,
-    state.otherMaterials,
-  );
+  const { materialsCost } = useProjectCosts();
 
   return (
     <div className="space-y-4">
@@ -29,7 +22,7 @@ export default function MaterialsCalculator() {
               Total Materials Cost per Batch
             </span>
             <span className="text-lg font-bold text-primary-500">
-              {formatCurrency(costs.totalMaterialsCost)}
+              {formatCurrency(materialsCost.totalMaterialsCost)}
             </span>
           </div>
           <div className="flex items-center justify-between mt-1">
@@ -37,7 +30,7 @@ export default function MaterialsCalculator() {
               Total for {state.batchCount} batch{state.batchCount !== 1 ? 'es' : ''}
             </span>
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {formatCurrency(costs.totalMaterialsCost * state.batchCount)}
+              {formatCurrency(materialsCost.totalMaterialsCost * state.batchCount)}
             </span>
           </div>
         </div>

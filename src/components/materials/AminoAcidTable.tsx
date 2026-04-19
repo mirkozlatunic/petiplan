@@ -65,7 +65,7 @@ export default function AminoAcidTable() {
                   onChange={(e) =>
                     dispatch({
                       type: 'UPDATE_AA_COST',
-                      payload: { code: aa.code, costPerGram: parseFloat(e.target.value) || 0 },
+                      payload: { code: aa.code, costPerGram: Math.max(0, parseFloat(e.target.value) || 0) },
                     })
                   }
                 />

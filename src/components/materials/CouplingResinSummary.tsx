@@ -44,7 +44,7 @@ export default function CouplingResinSummary() {
             step={1}
             value={state.resinCostPerGram || ''}
             onChange={(e) =>
-              dispatch({ type: 'SET_RESIN_COST', payload: parseFloat(e.target.value) || 0 })
+              dispatch({ type: 'SET_RESIN_COST', payload: Math.max(0, parseFloat(e.target.value) || 0) })
             }
           />
           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 w-24 text-right">

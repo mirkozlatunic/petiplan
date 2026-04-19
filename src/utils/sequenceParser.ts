@@ -7,12 +7,25 @@ export interface ParseResult {
   totalResidues: number;
 }
 
+/**
+ * Strips FASTA headers (lines starting with > or ;) and merges multi-line sequences.
+ * Also converts to uppercase and removes whitespace/digits/dashes.
+ */
+function preprocessSequence(raw: string): string {
+  return raw
+    .split('\n')
+    .filter(line => !line.startsWith('>') && !line.startsWith(';'))
+    .join('')
+    .toUpperCase()
+    .replace(/[\s\-\d*]/g, '');
+}
+
 export function parseSequence(
   sequence: string,
   scaleGrams: number,
   excessFactor: number,
 ): ParseResult {
-  const cleaned = sequence.replace(/[\s\-\d]/g, '').toUpperCase();
+  const cleaned = preprocessSequence(sequence);
   const errors: string[] = [];
   const counts = new Map<AminoAcidCode, number>();
 

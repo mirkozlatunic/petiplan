@@ -55,6 +55,14 @@ export interface PhaseConfig {
   label: string;
   daysPerBatch: number;
   color: string;
+  yieldPercent: number; // 0-100; percentage of product recovered after this phase
+}
+
+export interface PtmModification {
+  id: string;
+  name: string;
+  costDelta: number;     // additional cost per batch ($)
+  timeDeltaHours: number; // additional synthesis hours per batch
 }
 
 export interface CostSnapshot {
@@ -86,6 +94,7 @@ export interface ProjectState {
   phases: PhaseConfig[];
   previousSnapshot: CostSnapshot | null;
   sellingPricePerGram: number;
+  ptmModifications: PtmModification[];
 }
 
 export interface SavedProject {

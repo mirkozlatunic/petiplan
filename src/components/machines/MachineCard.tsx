@@ -28,6 +28,12 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
     dispatch({ type: 'UPDATE_MACHINE', payload: { id: machine.id, updates } });
   };
 
+  const handleDelete = () => {
+    if (window.confirm(`Remove "${machine.name}"? This cannot be undone.`)) {
+      dispatch({ type: 'REMOVE_MACHINE', payload: machine.id });
+    }
+  };
+
   return (
     <div
       className={`p-4 rounded-lg border transition-colors ${
@@ -40,6 +46,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
         <div className="flex items-center gap-2">
           <input
             type="text"
+            aria-label="Machine name"
             className="text-sm font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 w-full"
             value={machine.name}
             onChange={(e) => update({ name: e.target.value })}
@@ -58,7 +65,8 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
           )}
         </div>
         <button
-          onClick={() => dispatch({ type: 'REMOVE_MACHINE', payload: machine.id })}
+          onClick={handleDelete}
+          aria-label={`Remove ${machine.name}`}
           className="p-1 text-gray-400 hover:text-danger transition-colors shrink-0"
         >
           <Trash2 className="w-4 h-4" />
@@ -74,7 +82,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             min={0}
             step={1}
             value={machine.hourlyCost || ''}
-            onChange={(e) => update({ hourlyCost: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => update({ hourlyCost: Math.max(0, parseFloat(e.target.value) || 0) })}
           />
         </div>
         <div>
@@ -85,7 +93,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             min={0}
             step={1}
             value={machine.hoursPerBatch || ''}
-            onChange={(e) => update({ hoursPerBatch: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => update({ hoursPerBatch: Math.max(0, parseFloat(e.target.value) || 0) })}
           />
         </div>
         <div>
@@ -96,7 +104,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
             min={1}
             step={1}
             value={machine.unitsAvailable || ''}
-            onChange={(e) => update({ unitsAvailable: parseInt(e.target.value) || 1 })}
+            onChange={(e) => update({ unitsAvailable: Math.max(1, parseInt(e.target.value) || 1) })}
           />
         </div>
         <div>
@@ -105,6 +113,7 @@ export default function MachineCard({ machine, isBottleneck }: MachineCardProps)
           </label>
           <input
             type="range"
+            aria-label={`Utilization: ${formatPercent(machine.utilization * 100)}`}
             className="w-full accent-accent-500"
             min={0}
             max={1}
