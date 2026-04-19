@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { useProjectState } from '../../context/ProjectContext';
 import { generateTimeline, estimatedCompletionDays } from '../../utils/capacityCalculator';
-import { formatDuration, formatDate } from '../../utils/formatters';
+import { formatDuration, parseDateLocal } from '../../utils/formatters';
 import GanttChart from './GanttChart';
 import PhaseEditor from './PhaseEditor';
 
@@ -58,11 +58,12 @@ export default function CapacityTimeline() {
           <div className="flex items-center gap-2">
             <span className="text-gray-500 dark:text-gray-400">Est. Completion:</span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">
-              {formatDate(
-                new Date(
-                  new Date(state.startDate).getTime() + estDays * 24 * 60 * 60 * 1000,
-                ).toISOString(),
-              )}
+              {(() => {
+                // Parse in local time then add days — avoids UTC midnight shifting date by 1
+                const d = parseDateLocal(state.startDate);
+                d.setDate(d.getDate() + estDays);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              })()}
             </span>
           </div>
         )}

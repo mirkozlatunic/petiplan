@@ -24,14 +24,29 @@ export function formatNumber(value: number, decimals = 2): string {
   }).format(value);
 }
 
+/**
+ * Parses a date string (YYYY-MM-DD or ISO) in local time to avoid UTC-offset shift.
+ * new Date("2025-01-15") is midnight UTC, which is the previous calendar day in UTC- timezones.
+ */
+function parseDateLocal(isoString: string): Date {
+  const datePart = isoString.split('T')[0];
+  const parts = datePart.split('-').map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return new Date(isoString);
+}
+
 export function formatDate(isoString: string): string {
   if (!isoString) return '';
-  return new Date(isoString).toLocaleDateString('en-US', {
+  return parseDateLocal(isoString).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 }
+
+export { parseDateLocal };
 
 export function formatDuration(days: number): string {
   if (days < 7) return `${days} day${days !== 1 ? 's' : ''}`;

@@ -9,7 +9,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import type { BatchTimeline } from '../../utils/capacityCalculator';
-import { formatDuration } from '../../utils/formatters';
+import { formatDuration, parseDateLocal } from '../../utils/formatters';
 import { useTheme } from '@/context/ThemeContext';
 
 function TargetLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
@@ -87,7 +87,8 @@ export default function GanttChart({ batches, totalDays, targetDays, startDate }
             domain={[0, maxDay]}
             tickFormatter={(v: number) => {
               if (!startDate) return `Day ${v}`;
-              const date = new Date(startDate);
+              // Parse in local time to avoid UTC midnight being yesterday in UTC- timezones
+              const date = parseDateLocal(startDate);
               date.setDate(date.getDate() + v);
               return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             }}
