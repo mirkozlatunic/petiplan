@@ -117,28 +117,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function loadSession() {
       try {
-        // Race against a 5 s timeout — getSession() can hang if the stored
+        // Race against a 2 s timeout — getSession() can hang if a stored
         // refresh token triggers an internal token-refresh loop that never resolves.
         let timedOut = false;
         const timeout = new Promise<{ data: { session: null } }>((resolve) => {
-          setTimeout(() => { timedOut = true; resolve({ data: { session: null } }); }, 5000);
+          setTimeout(() => { timedOut = true; resolve({ data: { session: null } }); }, 2000);
         });
         const { data: { session } } = await Promise.race([
           supabase.auth.getSession(),
           timeout,
         ]);
-        // If we timed out, the client is stuck in a broken refresh loop.
-        // Clear the Supabase session key from localStorage directly — calling
-        // supabase.auth.signOut() here could itself hang for the same reason.
         if (timedOut) {
-          // Clear the stale session from storage.
+          // Clear the stale session key so the next load starts clean.
           const projectRef = (import.meta.env.VITE_SUPABASE_URL as string).split('//')[1]?.split('.')[0] ?? '';
           if (projectRef) localStorage.removeItem(`sb-${projectRef}-auth-token`);
-          // The GoTrue client keeps an internal _refreshingDeferred promise that
-          // blocks ALL subsequent auth calls (including signInWithPassword) until
-          // the refresh resolves. Null it out so the client is usable again.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase.auth as any)._refreshingDeferred = null;
+          // The Supabase client singleton holds in-memory state (pending refresh
+          // deferred) that blocks subsequent signInWithPassword calls — the only
+          // reliable reset is a full page reload with a fresh client instance.
+          // Use sessionStorage to prevent an infinite reload loop.
+          if (!sessionStorage.getItem('peptiplan-auth-reset')) {
+            sessionStorage.setItem('peptiplan-auth-reset', '1');
+            window.location.reload();
+            return;
+          }
+          sessionStorage.removeItem('peptiplan-auth-reset');
         }
         if (cancelled) return;
         if (session?.user) {
