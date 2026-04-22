@@ -128,10 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           timeout,
         ]);
         // If we timed out, the client is stuck in a broken refresh loop.
-        // Sign out locally to reset all internal auth state so subsequent
-        // signInWithPassword calls are not blocked.
+        // Clear the Supabase session key from localStorage directly — calling
+        // supabase.auth.signOut() here could itself hang for the same reason.
         if (timedOut) {
-          await supabase.auth.signOut({ scope: 'local' });
+          const projectRef = (import.meta.env.VITE_SUPABASE_URL as string).split('//')[1]?.split('.')[0] ?? '';
+          if (projectRef) localStorage.removeItem(`sb-${projectRef}-auth-token`);
         }
         if (cancelled) return;
         if (session?.user) {
