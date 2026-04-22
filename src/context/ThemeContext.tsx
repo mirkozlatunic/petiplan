@@ -30,11 +30,13 @@ function resolveTheme(theme: Theme): 'light' | 'dark' {
 
 function applyTheme(resolved: 'light' | 'dark') {
   const root = document.documentElement;
+  root.classList.add('theme-transitioning');
   if (resolved === 'dark') {
     root.classList.add('dark');
   } else {
     root.classList.remove('dark');
   }
+  window.setTimeout(() => root.classList.remove('theme-transitioning'), 500);
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

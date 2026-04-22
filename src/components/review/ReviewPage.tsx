@@ -1,4 +1,4 @@
-import { ArrowLeft, Pencil, DollarSign, Package, Scale, Download, Copy, Save, FolderOpen, Trash2, Check, Camera } from 'lucide-react';
+import { ArrowLeft, Pencil, DollarSign, Package, Scale, Download, Copy, Save, FolderOpen, Trash2, Check, Camera, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
 import { useProjectState, useProjectDispatch } from '../../context/ProjectContext';
 import { useProjectCosts } from '../../hooks/useProjectCosts';
@@ -12,11 +12,13 @@ import Delta from '../ui/Delta';
 import Header from '../layout/Header';
 import Card from '../ui/Card';
 import type { SectionKey } from '../../App';
-import type { SavedProject } from '../../types';
+import type { SavedProject, ProjectState } from '../../types';
 
 interface ReviewPageProps {
   onBack: () => void;
   onEditSection: (section: SectionKey) => void;
+  onNavigateToProjects?: () => void;
+  onCloudSave?: (state: ProjectState) => Promise<void>;
 }
 
 function SectionHeader({ title, sectionKey, onEdit }: { title: string; sectionKey: SectionKey; onEdit: (s: SectionKey) => void }) {
@@ -46,7 +48,7 @@ function LineItem({ label, value, indent = false }: { label: string; value: stri
 
 const btnClass = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors';
 
-export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
+export default function ReviewPage({ onBack, onEditSection, onNavigateToProjects, onCloudSave }: ReviewPageProps) {
   const state = useProjectState();
   const dispatch = useProjectDispatch();
   const { contentRef, exportPdf } = usePdfExport();
@@ -54,6 +56,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [projects, setProjects] = useState<SavedProject[]>([]);
 
@@ -65,13 +68,26 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSave = () => {
-    saveProject(state);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (onCloudSave) {
+        await onCloudSave(state);
+      } else {
+        saveProject(state);
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOpenLoad = () => {
+    if (onNavigateToProjects) {
+      onNavigateToProjects();
+      return;
+    }
     setProjects(listSavedProjects());
     setShowLoadDialog(true);
   };
@@ -105,7 +121,7 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
 
   return (
     <>
-      <Header />
+      <Header onBackToProjects={onNavigateToProjects} />
 
       <main ref={contentRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         {/* Back button + title */}
@@ -361,13 +377,13 @@ export default function ReviewPage({ onBack, onEditSection }: ReviewPageProps) {
                 {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied!' : 'Copy Summary'}
               </button>
-              <button onClick={handleSave} className={`${btnClass} text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600`}>
+              <button onClick={handleSave} disabled={saving} className={`${btnClass} text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50`}>
                 {saved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4" />}
-                {saved ? 'Saved!' : 'Save Project'}
+                {saving ? 'Saving…' : saved ? 'Saved!' : 'Save Project'}
               </button>
               <button onClick={handleOpenLoad} className={`${btnClass} text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600`}>
-                <FolderOpen className="w-4 h-4" />
-                Load Project
+                {onNavigateToProjects ? <LayoutGrid className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
+                {onNavigateToProjects ? 'All Projects' : 'Load Project'}
               </button>
             </div>
 

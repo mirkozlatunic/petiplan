@@ -102,3 +102,75 @@ export interface SavedProject {
   savedAt: string;
   state: ProjectState;
 }
+
+// ============================================================
+// AUTH & CLOUD TYPES
+// ============================================================
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+export type OrgRole = 'owner' | 'admin' | 'member';
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface OrgMember {
+  id: string;
+  orgId: string;
+  userId: string;
+  role: OrgRole;
+  joinedAt: string;
+  profile?: Pick<AuthUser, 'displayName' | 'email' | 'avatarUrl'>;
+}
+
+export type SharePermission = 'read' | 'edit';
+export type OwnerType = 'user' | 'org';
+
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  ownerType: OwnerType;
+  ownerUserId: string | null;
+  ownerOrgId: string | null;
+  state: ProjectState;
+  createdAt: string;
+  updatedAt: string;
+  myPermission?: SharePermission | 'owner';
+}
+
+export interface ProjectShare {
+  id: string;
+  projectId: string;
+  sharedWith: string;
+  permission: SharePermission;
+  grantedBy: string;
+  createdAt: string;
+  profile?: Pick<AuthUser, 'displayName' | 'email' | 'avatarUrl'>;
+}
+
+export type InviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface Invitation {
+  id: string;
+  inviteType: 'org_member' | 'project_share';
+  email: string;
+  invitedBy: string;
+  orgId: string | null;
+  projectId: string | null;
+  role: OrgRole | null;
+  permission: SharePermission | null;
+  token: string;
+  status: InviteStatus;
+  expiresAt: string;
+  createdAt: string;
+}

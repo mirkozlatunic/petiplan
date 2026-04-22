@@ -1,5 +1,6 @@
 import { ThemeProvider } from './context/ThemeContext';
-import { ProjectProvider, useProjectState } from './context/ProjectContext';
+import { ProjectProvider, useProjectState, useProjectDispatch } from './context/ProjectContext';
+import { AuthProvider, useAuthState } from './context/AuthContext';
 import Header from './components/layout/Header';
 import SectionWrapper from './components/layout/SectionWrapper';
 import type { SectionStatus } from './components/layout/SectionWrapper';
@@ -11,10 +12,16 @@ import LaborCalculator from './components/labor/LaborCalculator';
 import CapacityTimeline from './components/timeline/CapacityTimeline';
 import ReviewPage from './components/review/ReviewPage';
 import MobileSummaryBar from './components/layout/MobileSummaryBar';
+import LoginPage from './components/auth/LoginPage';
+import SignupPage from './components/auth/SignupPage';
+import OrgSetupPage from './components/auth/OrgSetupPage';
+import ProjectsPage from './components/projects/ProjectsPage';
+import { useProjects } from './hooks/useProjects';
 import { Settings, FlaskRound, Beaker, Cpu, Users, Calendar, ClipboardCheck, AlertTriangle } from 'lucide-react';
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import type { ProjectRecord, ProjectState } from './types';
 
-export type Page = 'builder' | 'review';
+export type Page = 'login' | 'signup' | 'org-setup' | 'projects' | 'builder' | 'review';
 
 export interface SectionStatuses {
   projectSetup: SectionStatus;
@@ -79,7 +86,13 @@ function useProjectStatus(): SectionStatuses {
   }, [state]);
 }
 
-function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void }) {
+function BuilderPage({
+  onNavigateToReview,
+  onNavigateToProjects,
+}: {
+  onNavigateToReview: () => void;
+  onNavigateToProjects: () => void;
+}) {
   const status = useProjectStatus();
   const [warning, setWarning] = useState<string | null>(null);
   const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -92,7 +105,6 @@ function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void })
       return;
     }
 
-    // Find first incomplete section
     const sectionKeys: SectionKey[] = ['projectSetup', 'materials', 'otherMaterials', 'machines', 'labor', 'timeline'];
     const firstIncomplete = sectionKeys.find((key) => status[key] === 'incomplete');
 
@@ -106,7 +118,6 @@ function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void })
       const el = document.getElementById(SECTION_IDS[firstIncomplete]);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Flash the section
         el.classList.add('ring-2', 'ring-warning', 'ring-offset-2');
         setTimeout(() => el.classList.remove('ring-2', 'ring-warning', 'ring-offset-2'), 2000);
       }
@@ -115,7 +126,7 @@ function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void })
 
   return (
     <>
-      <Header />
+      <Header onBackToProjects={onNavigateToProjects} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div id={SECTION_IDS.projectSetup} className="scroll-mt-20 rounded-xl transition-all duration-300">
@@ -154,7 +165,6 @@ function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void })
           </SectionWrapper>
         </div>
 
-        {/* Review button */}
         <div className="pt-4">
           {warning && (
             <div className="mb-3 flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300">
@@ -182,20 +192,89 @@ function BuilderPage({ onNavigateToReview }: { onNavigateToReview: () => void })
 }
 
 function AppContent() {
-  const [page, setPage] = useState<Page>('builder');
+  const { initialized, user } = useAuthState();
+  const dispatch = useProjectDispatch();
+  const { saveProject } = useProjects();
+  const [page, setPage] = useState<Page>('login');
+  const [activeCloudProjectId, setActiveCloudProjectId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialized) return;
+    if (user && (page === 'login' || page === 'signup')) {
+      setPage('projects');
+    } else if (!user && page !== 'login' && page !== 'signup') {
+      setPage('login');
+    }
+  }, [user, initialized, page]);
+
+  const handleOpenProject = useCallback((record: ProjectRecord) => {
+    dispatch({ type: 'LOAD_PROJECT', payload: record.state });
+    setActiveCloudProjectId(record.id);
+    setPage('builder');
+    window.scrollTo(0, 0);
+  }, [dispatch]);
+
+  const handleNewProject = useCallback(() => {
+    dispatch({ type: 'RESET_PROJECT' });
+    setActiveCloudProjectId(null);
+    setPage('builder');
+    window.scrollTo(0, 0);
+  }, [dispatch]);
+
+  const handleCloudSave = useCallback(async (state: ProjectState) => {
+    const record = await saveProject(state, activeCloudProjectId ?? undefined);
+    if (!activeCloudProjectId) setActiveCloudProjectId(record.id);
+  }, [saveProject, activeCloudProjectId]);
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    if (page === 'signup') return <SignupPage onNavigateToLogin={() => setPage('login')} />;
+    return <LoginPage onNavigateToSignup={() => setPage('signup')} />;
+  }
+
+  if (page === 'org-setup') {
+    return (
+      <OrgSetupPage
+        onComplete={() => setPage('projects')}
+        onSkip={() => setPage('projects')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 md:pb-0">
-      {page === 'builder' ? (
-        <BuilderPage onNavigateToReview={() => { setPage('review'); window.scrollTo(0, 0); }} />
-      ) : (
-        <ReviewPage onBack={() => { setPage('builder'); window.scrollTo(0, 0); }} onEditSection={(section: SectionKey) => {
-          setPage('builder');
-          requestAnimationFrame(() => {
-            const el = document.getElementById(SECTION_IDS[section]);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-        }} />
+      {page === 'projects' && (
+        <ProjectsPage
+          onOpenProject={handleOpenProject}
+          onNewProject={handleNewProject}
+        />
+      )}
+      {page === 'builder' && (
+        <BuilderPage
+          onNavigateToReview={() => { setPage('review'); window.scrollTo(0, 0); }}
+          onNavigateToProjects={() => setPage('projects')}
+        />
+      )}
+      {page === 'review' && (
+        <ReviewPage
+          onBack={() => { setPage('builder'); window.scrollTo(0, 0); }}
+          onNavigateToProjects={() => setPage('projects')}
+          onCloudSave={handleCloudSave}
+          onEditSection={(section: SectionKey) => {
+            setPage('builder');
+            requestAnimationFrame(() => {
+              const el = document.getElementById(SECTION_IDS[section]);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+          }}
+        />
       )}
     </div>
   );
@@ -204,9 +283,11 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <ProjectProvider>
-        <AppContent />
-      </ProjectProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <AppContent />
+        </ProjectProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

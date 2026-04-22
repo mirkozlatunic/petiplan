@@ -68,8 +68,12 @@ export default function GanttChart({ batches, totalDays, targetDays, startDate }
 
   const data: GanttDataPoint[] = batches.map((batch) => {
     const point: GanttDataPoint = { name: `Batch ${batch.batchNumber}` };
-    batch.phases.forEach((phase) => {
-      point[`${phase.phase}Offset`] = phase.startDay;
+    batch.phases.forEach((phase, idx) => {
+      // In a stacked bar chart every segment stacks on top of all previous segments.
+      // Only the FIRST phase needs a spacer equal to the batch's start offset;
+      // subsequent phases are sequential so their gap is 0.
+      const gap = idx === 0 ? phase.startDay : 0;
+      point[`${phase.phase}Offset`] = gap;
       point[`${phase.phase}Duration`] = phase.endDay - phase.startDay;
     });
     return point;
@@ -78,6 +82,12 @@ export default function GanttChart({ batches, totalDays, targetDays, startDate }
   const phases = batches[0]?.phases ?? [];
   const maxDay = Math.max(totalDays, targetDays ?? 0) + 2;
 
+  // Generate ticks that always include Day 0 (= project start date)
+  const tickCount = 6;
+  const tickInterval = Math.ceil(maxDay / tickCount);
+  const xTicks = Array.from({ length: tickCount + 1 }, (_, i) => i * tickInterval).filter((t) => t <= maxDay);
+  if (!xTicks.includes(0)) xTicks.unshift(0);
+
   return (
     <div style={{ height: Math.max(140, batches.length * 60 + 80) }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -85,6 +95,7 @@ export default function GanttChart({ batches, totalDays, targetDays, startDate }
           <XAxis
             type="number"
             domain={[0, maxDay]}
+            ticks={xTicks}
             tickFormatter={(v: number) => {
               if (!startDate) return `Day ${v}`;
               // Parse in local time to avoid UTC midnight being yesterday in UTC- timezones
