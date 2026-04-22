@@ -131,8 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Clear the Supabase session key from localStorage directly — calling
         // supabase.auth.signOut() here could itself hang for the same reason.
         if (timedOut) {
+          // Clear the stale session from storage.
           const projectRef = (import.meta.env.VITE_SUPABASE_URL as string).split('//')[1]?.split('.')[0] ?? '';
           if (projectRef) localStorage.removeItem(`sb-${projectRef}-auth-token`);
+          // The GoTrue client keeps an internal _refreshingDeferred promise that
+          // blocks ALL subsequent auth calls (including signInWithPassword) until
+          // the refresh resolves. Null it out so the client is usable again.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.auth as any)._refreshingDeferred = null;
         }
         if (cancelled) return;
         if (session?.user) {
