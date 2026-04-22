@@ -85,6 +85,16 @@ export default function ProjectSetupPanel() {
             onChange={(e) => dispatch({ type: 'SET_PROJECT_NAME', payload: e.target.value })}
           />
         </div>
+        <div className="sm:col-span-2 md:col-span-1">
+          <label className={labelClass}>Customer <span className="font-normal text-gray-400">(optional)</span></label>
+          <input
+            type="text"
+            className={inputClass}
+            placeholder="Customer or company name"
+            value={state.customer ?? ''}
+            onChange={(e) => dispatch({ type: 'SET_CUSTOMER', payload: e.target.value })}
+          />
+        </div>
         <div>
           <label className={labelClass}>GMP Classification</label>
           <div

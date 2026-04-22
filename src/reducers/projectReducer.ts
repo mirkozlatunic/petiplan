@@ -5,6 +5,7 @@ import { DEFAULT_PHASES, DEFAULT_YIELD_BY_PHASE } from '../constants/phaseDefaul
 
 export const initialState: ProjectState = {
   projectName: '',
+  customer: '',
   gmpStatus: 'non-gmp',
   sequence: '',
   batchCount: 1,
@@ -27,6 +28,7 @@ export const initialState: ProjectState = {
 
 export type ProjectAction =
   | { type: 'SET_PROJECT_NAME'; payload: string }
+  | { type: 'SET_CUSTOMER'; payload: string }
   | { type: 'SET_GMP_STATUS'; payload: GmpStatus }
   | { type: 'SET_SEQUENCE'; payload: string }
   | { type: 'SET_BATCH_COUNT'; payload: number }
@@ -94,6 +96,9 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
   switch (action.type) {
     case 'SET_PROJECT_NAME':
       return { ...state, projectName: action.payload };
+
+    case 'SET_CUSTOMER':
+      return { ...state, customer: action.payload };
 
     case 'SET_GMP_STATUS':
       return { ...state, gmpStatus: action.payload };
@@ -342,6 +347,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         ...loaded,
         phases: migratedPhases,
         ptmModifications: loaded.ptmModifications ?? [],
+        customer: loaded.customer ?? '',
       };
     }
 

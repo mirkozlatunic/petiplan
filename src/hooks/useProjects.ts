@@ -6,6 +6,7 @@ import type { ProjectRecord, ProjectShare, ProjectState, SavedProject, OwnerType
 interface ProjectRow {
   id: string;
   name: string;
+  folder: string | null;
   owner_type: OwnerType;
   owner_user_id: string | null;
   owner_org_id: string | null;
@@ -28,6 +29,7 @@ function mapRow(row: ProjectRow, permission: SharePermission | 'owner' = 'owner'
   return {
     id: row.id,
     name: row.name,
+    folder: row.folder ?? undefined,
     ownerType: row.owner_type,
     ownerUserId: row.owner_user_id,
     ownerOrgId: row.owner_org_id,
@@ -105,10 +107,11 @@ export function useProjects(): UseProjectsReturn {
   const saveProject = useCallback(async (state: ProjectState, projectId?: string): Promise<ProjectRecord> => {
     if (!user) throw new Error('Not authenticated');
 
+    const folder = state.customer?.trim() || null;
     if (projectId) {
       const { data, error: err } = await supabase
         .from('projects')
-        .update({ name: state.projectName || 'Untitled Project', state, updated_at: new Date().toISOString() })
+        .update({ name: state.projectName || 'Untitled Project', folder, state, updated_at: new Date().toISOString() })
         .eq('id', projectId)
         .select()
         .single();
@@ -119,7 +122,7 @@ export function useProjects(): UseProjectsReturn {
     } else {
       const { data, error: err } = await supabase
         .from('projects')
-        .insert({ name: state.projectName || 'Untitled Project', owner_type: 'user', owner_user_id: user.id, state })
+        .insert({ name: state.projectName || 'Untitled Project', folder, owner_type: 'user', owner_user_id: user.id, state })
         .select()
         .single();
       if (err) throw err;

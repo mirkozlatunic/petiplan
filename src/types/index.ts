@@ -77,6 +77,7 @@ export interface CostSnapshot {
 
 export interface ProjectState {
   projectName: string;
+  customer?: string;
   gmpStatus: GmpStatus;
   sequence: string;
   batchCount: number;
@@ -139,6 +140,7 @@ export type OwnerType = 'user' | 'org';
 export interface ProjectRecord {
   id: string;
   name: string;
+  folder?: string;
   ownerType: OwnerType;
   ownerUserId: string | null;
   ownerOrgId: string | null;

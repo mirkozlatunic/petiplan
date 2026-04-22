@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import MigrateLocalModal from '@/components/projects/MigrateLocalModal';
 import ShareModal from '@/components/projects/ShareModal';
@@ -168,6 +169,61 @@ function Section({
   );
 }
 
+function FolderSection({
+  name,
+  projects,
+  onOpen,
+  onDelete,
+  onShare,
+  userId,
+}: {
+  name: string;
+  projects: ProjectRecord[];
+  onOpen: (r: ProjectRecord) => void;
+  onDelete: (id: string) => void;
+  onShare: (r: ProjectRecord) => void;
+  userId: string;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 mb-3 group"
+      >
+        <Folder className="w-4 h-4 text-primary-400" />
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{name}</h3>
+        <span className="text-xs text-gray-400 dark:text-gray-500">({projects.length})</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {projects.map((record) => (
+                <ProjectCard
+                  key={record.id}
+                  record={record}
+                  onOpen={() => onOpen(record)}
+                  onDelete={() => onDelete(record.id)}
+                  onShare={() => onShare(record)}
+                  isOwner={record.ownerUserId === userId || record.myPermission === 'owner'}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function EmptyState({ onNewProject }: { onNewProject: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -246,15 +302,36 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
           <EmptyState onNewProject={onNewProject} />
         ) : (
           <div className="space-y-10">
-            <Section
-              title="My Projects"
-              icon={<FolderOpen className="w-4 h-4" />}
-              projects={myProjects}
-              onOpen={onOpenProject}
-              onDelete={deleteProject}
-              onShare={setShareTarget}
-              userId={user?.id ?? ''}
-            />
+            {(() => {
+              const ungrouped = myProjects.filter((p) => !p.folder);
+              const folderNames = [...new Set(myProjects.filter((p) => p.folder).map((p) => p.folder as string))].sort();
+              return (
+                <div className="space-y-8">
+                  {ungrouped.length > 0 && (
+                    <Section
+                      title="My Projects"
+                      icon={<FolderOpen className="w-4 h-4" />}
+                      projects={ungrouped}
+                      onOpen={onOpenProject}
+                      onDelete={deleteProject}
+                      onShare={setShareTarget}
+                      userId={user?.id ?? ''}
+                    />
+                  )}
+                  {folderNames.map((folder) => (
+                    <FolderSection
+                      key={folder}
+                      name={folder}
+                      projects={myProjects.filter((p) => p.folder === folder)}
+                      onOpen={onOpenProject}
+                      onDelete={deleteProject}
+                      onShare={setShareTarget}
+                      userId={user?.id ?? ''}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
             {orgProjects.length > 0 && (
               <Section
                 title={currentOrg?.name ?? 'Organization'}
