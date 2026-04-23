@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, User, Sun, Moon, Monitor, Check, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthState, useAuthActions } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -73,7 +74,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[300] flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -213,6 +214,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

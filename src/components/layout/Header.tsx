@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FlaskConical, LogOut, Settings, ChevronLeft, ChevronDown, Building2, Check } from 'lucide-react';
 import { ToggleTheme } from '@/components/ui/toggle-theme';
 import { useAuthState, useAuthActions } from '@/context/AuthContext';
@@ -112,22 +113,21 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
         <UserAvatar name={user.displayName} size={34} />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4" onClick={() => setOpen(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div
-            className="relative w-full max-w-xs bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100 dark:border-slate-700">
-              <UserAvatar name={user.displayName} size={44} />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.displayName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-              </div>
+      {open && createPortal(
+        <>
+          {/* invisible backdrop — catches clicks outside the panel */}
+          <div className="fixed inset-0 z-[499]" onClick={() => setOpen(false)} />
+
+          {/* dropdown panel anchored below the avatar button */}
+          <div className="fixed top-[68px] right-4 sm:right-6 lg:right-8 w-72 z-[500] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+            {/* profile card — large centered avatar + name + email */}
+            <div className="flex flex-col items-center px-5 pt-6 pb-5 bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700">
+              <UserAvatar name={user.displayName} size={60} />
+              <p className="mt-3 text-base font-semibold text-gray-900 dark:text-white">{user.displayName}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-full">{user.email}</p>
             </div>
 
-            <div className="py-1">
+            <div className="py-1.5">
               <button
                 onClick={() => { setOpen(false); setShowSettings(true); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -137,7 +137,7 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
               </button>
             </div>
 
-            <div className="border-t border-gray-100 dark:border-slate-700 py-1">
+            <div className="border-t border-gray-100 dark:border-slate-700 py-1.5">
               <button
                 onClick={async () => { setOpen(false); await signOut(); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -147,10 +147,15 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
               </button>
             </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {/* SettingsModal via portal so it escapes the header's backdrop-filter stacking context */}
+      {showSettings && createPortal(
+        <SettingsModal onClose={() => setShowSettings(false)} />,
+        document.body
+      )}
     </>
   );
 }
