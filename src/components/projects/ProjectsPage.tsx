@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown, Copy, TriangleAlert } from 'lucide-react';
+import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown, Copy, TriangleAlert, Search, X } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import MigrateLocalModal from '@/components/projects/MigrateLocalModal';
 import ShareModal from '@/components/projects/ShareModal';
@@ -21,11 +21,8 @@ interface ProjectsPageProps {
   onMigrateLocalProjects: (locals: SavedProject[]) => Promise<{ imported: number; failed: string[] }>;
 }
 
-const AVATAR_COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#DC2626', '#D97706', '#059669', '#0891B2', '#0284C7'];
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+function getProjectColor(gmpStatus: string): string {
+  return gmpStatus === 'gmp' ? '#3B82F6' : '#1E3A5F';
 }
 
 function PermissionBadge({ permission }: { permission: SharePermission | 'owner' }) {
@@ -105,7 +102,7 @@ function ProjectCard({
   isOwner: boolean;
 }) {
   const state = record.state as ProjectState;
-  const color = getAvatarColor(record.name);
+  const color = getProjectColor(state.gmpStatus);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
@@ -319,6 +316,7 @@ export default function ProjectsPage({
   const [showMigrate, setShowMigrate] = useState(false);
   const [localProjects, setLocalProjects] = useState(() => listSavedProjects());
   const [shareTarget, setShareTarget] = useState<ProjectRecord | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const offered = localStorage.getItem('peptiplan-migration-offered');
@@ -333,17 +331,27 @@ export default function ProjectsPage({
     }
   }, []);
 
-  const myProjects = projects.filter((p) => p.ownerUserId === user?.id);
-  const orgProjects = projects.filter((p) => p.ownerType === 'org' && p.ownerOrgId === currentOrg?.id);
-  const sharedProjects = projects.filter((p) => p.myPermission !== 'owner' && p.ownerUserId !== user?.id && p.ownerType !== 'org');
+  const q = searchQuery.trim().toLowerCase();
+  const filteredProjects = q
+    ? projects.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          ((p.state as ProjectState).customer ?? '').toLowerCase().includes(q)
+      )
+    : projects;
+
+  const myProjects = filteredProjects.filter((p) => p.ownerUserId === user?.id);
+  const orgProjects = filteredProjects.filter((p) => p.ownerType === 'org' && p.ownerOrgId === currentOrg?.id);
+  const sharedProjects = filteredProjects.filter((p) => p.myPermission !== 'owner' && p.ownerUserId !== user?.id && p.ownerType !== 'org');
   const totalCount = projects.length;
+  const filteredCount = filteredProjects.length;
 
   return (
     <>
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Projects</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -355,6 +363,28 @@ export default function ProjectsPage({
             New Project
           </button>
         </div>
+
+        {totalCount > 0 && (
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by project or customer name…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-9 py-2.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 mb-6 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-400">
@@ -369,6 +399,14 @@ export default function ProjectsPage({
           </div>
         ) : totalCount === 0 ? (
           <EmptyState onNewProject={onNewProject} />
+        ) : q && filteredCount === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No projects match "{searchQuery}"</p>
+            <button onClick={() => setSearchQuery('')} className="mt-3 text-sm text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+              Clear search
+            </button>
+          </div>
         ) : (
           <div className="space-y-10">
             {(() => {

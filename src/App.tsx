@@ -17,8 +17,8 @@ import SignupPage from './components/auth/SignupPage';
 import OrgSetupPage from './components/auth/OrgSetupPage';
 import ProjectsPage from './components/projects/ProjectsPage';
 import { useProjects } from './hooks/useProjects';
-import { Settings, FlaskRound, Beaker, Cpu, Users, Calendar, ClipboardCheck, AlertTriangle } from 'lucide-react';
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { Settings, FlaskRound, Beaker, Cpu, Users, Calendar, ClipboardCheck, AlertTriangle, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import type { ProjectRecord, ProjectState } from './types';
 
 export type Page = 'login' | 'signup' | 'org-setup' | 'projects' | 'builder' | 'review';
@@ -50,6 +50,15 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   machines: 'Machine / Equipment',
   labor: 'Labor',
   timeline: 'Capacity Timeline',
+};
+
+const SECTION_HINTS: Record<SectionKey, string> = {
+  projectSetup: 'Project name, sequence, batch count, start & end date',
+  materials: 'Add at least one amino acid or starting material',
+  otherMaterials: 'Add at least one consumable or solvent',
+  machines: 'Add at least one machine or equipment item',
+  labor: 'Add at least one labor role',
+  timeline: 'Requires project dates and at least one machine',
 };
 
 function useProjectStatus(): SectionStatuses {
@@ -86,6 +95,8 @@ function useProjectStatus(): SectionStatuses {
   }, [state]);
 }
 
+const ALL_SECTION_KEYS: SectionKey[] = ['projectSetup', 'materials', 'otherMaterials', 'machines', 'labor', 'timeline'];
+
 function BuilderPage({
   onNavigateToReview,
   onNavigateToProjects,
@@ -94,35 +105,35 @@ function BuilderPage({
   onNavigateToProjects: () => void;
 }) {
   const status = useProjectStatus();
-  const [warning, setWarning] = useState<string | null>(null);
-  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   const allComplete = Object.values(status).every((s) => s === 'complete');
+  const incompleteSections = ALL_SECTION_KEYS.filter((k) => status[k] === 'incomplete');
+
+  // Hide checklist once everything is complete
+  useEffect(() => {
+    if (allComplete) setShowChecklist(false);
+  }, [allComplete]);
+
+  const scrollToSection = useCallback((key: SectionKey) => {
+    const el = document.getElementById(SECTION_IDS[key]);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-warning', 'ring-offset-2');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-warning', 'ring-offset-2'), 2000);
+    }
+  }, []);
 
   const handleReviewClick = useCallback(() => {
     if (allComplete) {
       onNavigateToReview();
       return;
     }
-
-    const sectionKeys: SectionKey[] = ['projectSetup', 'materials', 'otherMaterials', 'machines', 'labor', 'timeline'];
-    const firstIncomplete = sectionKeys.find((key) => status[key] === 'incomplete');
-
-    if (firstIncomplete) {
-      const label = SECTION_LABELS[firstIncomplete];
-      setWarning(`Please complete "${label}" before proceeding to review.`);
-
-      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-      warningTimeoutRef.current = setTimeout(() => setWarning(null), 4000);
-
-      const el = document.getElementById(SECTION_IDS[firstIncomplete]);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        el.classList.add('ring-2', 'ring-warning', 'ring-offset-2');
-        setTimeout(() => el.classList.remove('ring-2', 'ring-warning', 'ring-offset-2'), 2000);
-      }
-    }
-  }, [allComplete, status, onNavigateToReview]);
+    setShowChecklist(true);
+    // Scroll to the first incomplete section
+    const first = incompleteSections[0];
+    if (first) scrollToSection(first);
+  }, [allComplete, incompleteSections, onNavigateToReview, scrollToSection]);
 
   return (
     <>
@@ -166,10 +177,30 @@ function BuilderPage({
         </div>
 
         <div className="pt-4">
-          {warning && (
-            <div className="mb-3 flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              {warning}
+          {showChecklist && !allComplete && (
+            <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/60 rounded-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  Complete these sections before reviewing:
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {incompleteSections.map((key) => (
+                  <li key={key}>
+                    <button
+                      onClick={() => scrollToSection(key)}
+                      className="flex items-center gap-2 w-full text-left group"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5 text-amber-500 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                      <span className="text-sm text-amber-700 dark:text-amber-400 group-hover:text-amber-900 dark:group-hover:text-amber-200 transition-colors">
+                        <span className="font-medium">{SECTION_LABELS[key]}</span>
+                        <span className="text-amber-500 dark:text-amber-500 ml-1.5">— {SECTION_HINTS[key]}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <button
