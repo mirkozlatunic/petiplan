@@ -137,7 +137,7 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
                   <button
                     type="button"
                     onClick={() => { setMode('forgot-password'); setError(null); setResetSent(false); }}
-                    className="text-xs text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    className="text-xs text-primary-500 dark:text-primary-300 hover:text-primary-600 dark:hover:text-primary-200 transition-colors"
                   >
                     Forgot password?
                   </button>
@@ -175,7 +175,7 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
                 <button
                   type="button"
                   onClick={() => { setMode('password'); setResetSent(false); setError(null); }}
-                  className="flex items-center gap-1.5 text-sm text-primary-500 hover:underline mt-1"
+                  className="flex items-center gap-1.5 text-sm text-primary-500 dark:text-primary-300 hover:underline mt-1"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to sign in
@@ -229,7 +229,7 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
               <button
                 type="button"
                 onClick={() => setMagicSent(false)}
-                className="text-sm text-primary-500 hover:underline mt-1"
+                className="text-sm text-primary-500 dark:text-primary-300 hover:underline mt-1"
               >
                 Send again
               </button>
@@ -271,7 +271,7 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
           <button
             type="button"
             onClick={onNavigateToSignup}
-            className="text-primary-500 hover:underline font-medium"
+            className="text-primary-500 dark:text-primary-300 hover:underline font-medium"
           >
             Sign up
           </button>

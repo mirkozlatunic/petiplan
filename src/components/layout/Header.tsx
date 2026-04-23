@@ -89,15 +89,6 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
   const { signOut } = useAuthActions();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   if (!user) {
     return (
@@ -112,20 +103,24 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
 
   return (
     <>
-      <div className="relative" ref={ref}>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex items-center rounded-full ring-2 ring-transparent hover:ring-gray-300 dark:hover:ring-slate-500 transition-all"
-          aria-label="Account menu"
-          aria-expanded={open}
-        >
-          <UserAvatar name={user.displayName} size={34} />
-        </button>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center rounded-full ring-2 ring-transparent hover:ring-gray-300 dark:hover:ring-slate-500 transition-all"
+        aria-label="Account menu"
+        aria-expanded={open}
+      >
+        <UserAvatar name={user.displayName} size={34} />
+      </button>
 
-        {open && (
-          <div className="fixed top-[68px] right-4 sm:right-6 lg:right-8 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden z-[500]">
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-slate-700">
-              <UserAvatar name={user.displayName} size={40} />
+      {open && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4" onClick={() => setOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-xs bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100 dark:border-slate-700">
+              <UserAvatar name={user.displayName} size={44} />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.displayName}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
@@ -152,8 +147,8 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </>
