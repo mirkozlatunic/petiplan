@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown, Copy } from 'lucide-react';
+import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown, Copy, TriangleAlert } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import MigrateLocalModal from '@/components/projects/MigrateLocalModal';
 import ShareModal from '@/components/projects/ShareModal';
@@ -42,6 +42,53 @@ function PermissionBadge({ permission }: { permission: SharePermission | 'owner'
   );
 }
 
+function DeleteConfirmModal({
+  projectName,
+  onConfirm,
+  onCancel,
+}: {
+  projectName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 mx-auto">
+          <Trash2 className="w-6 h-6 text-red-500" />
+        </div>
+        <div className="text-center">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Delete project?</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            You're about to delete <span className="font-medium text-gray-700 dark:text-gray-200">"{projectName}"</span>.
+          </p>
+        </div>
+        <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg">
+          <TriangleAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700 dark:text-red-400">
+            This action cannot be reversed. All project data will be permanently lost.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProjectCard({
   record,
   onOpen,
@@ -59,88 +106,87 @@ function ProjectCard({
 }) {
   const state = record.state as ProjectState;
   const color = getAvatarColor(record.name);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <div className="group bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-md transition-all overflow-hidden flex flex-col">
-      <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+    <>
+      <div className="group bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-md transition-all overflow-hidden flex flex-col">
+        <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
 
-      <div className="p-4 flex flex-col gap-3 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2 flex-1">
-            {record.name}
-          </h3>
-          {isOwner && (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); onUseAsTemplate(); }}
-                className="p-1 rounded-md text-gray-400 hover:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors"
-                aria-label="Use as template"
-                title="Use as template"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onShare(); }}
-                className="p-1 rounded-md text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
-                aria-label="Share"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                aria-label="Delete"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="p-4 flex flex-col gap-3 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2 flex-1">
+              {record.name}
+            </h3>
+            {isOwner && (
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onUseAsTemplate(); }}
+                  className="p-1 rounded-md text-gray-400 hover:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors"
+                  aria-label="Use as template"
+                  title="Use as template"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onShare(); }}
+                  className="p-1 rounded-md text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                  aria-label="Share"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+                  className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400">
-            <Layers className="w-3 h-3" />
-            {state.batchCount} batch{state.batchCount !== 1 ? 'es' : ''}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400">
-            <FlaskConical className="w-3 h-3" />
-            {state.scale === 'custom' ? `${state.customScaleGrams}g` : state.scale}
-          </span>
-          {state.gmpStatus === 'gmp' && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-              GMP
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400">
+              <Layers className="w-3 h-3" />
+              {state.batchCount} batch{state.batchCount !== 1 ? 'es' : ''}
             </span>
-          )}
-          {record.myPermission && record.myPermission !== 'owner' && (
-            <PermissionBadge permission={record.myPermission} />
-          )}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400">
+              <FlaskConical className="w-3 h-3" />
+              {state.scale === 'custom' ? `${state.customScaleGrams}g` : state.scale}
+            </span>
+            {state.gmpStatus === 'gmp' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                GMP
+              </span>
+            )}
+            {record.myPermission && record.myPermission !== 'owner' && (
+              <PermissionBadge permission={record.myPermission} />
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mt-auto">
+            <Clock className="w-3 h-3" />
+            {formatDate(record.updatedAt)}
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mt-auto">
-          <Clock className="w-3 h-3" />
-          {formatDate(record.updatedAt)}
-        </div>
-      </div>
-
-      {confirmDelete ? (
-        <div className="px-4 pb-4 flex gap-2">
-          <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
-            Cancel
-          </button>
-          <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="flex-1 py-2 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
-            Delete
-          </button>
-        </div>
-      ) : (
         <div className="px-4 pb-4">
           <button onClick={onOpen} className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-white rounded-lg transition-colors" style={{ backgroundColor: color }}>
             <FolderOpen className="w-4 h-4" />
             Open
           </button>
         </div>
+      </div>
+
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          projectName={record.name}
+          onConfirm={() => { onDelete(); setShowDeleteModal(false); }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
       )}
-    </div>
+    </>
   );
 }
 
