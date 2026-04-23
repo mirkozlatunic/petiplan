@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, User, Sun, Moon, Monitor, Check } from 'lucide-react';
+import { X, User, Sun, Moon, Monitor, Check, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthState, useAuthActions } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { Theme } from '@/context/ThemeContext';
@@ -16,13 +16,39 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: React.ElementType }[] 
 
 export default function SettingsModal({ onClose }: SettingsModalProps) {
   const { user } = useAuthState();
-  const { updateProfile } = useAuthActions();
+  const { updateProfile, updatePassword } = useAuthActions();
   const { theme, setTheme } = useTheme();
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+  const [savedPw, setSavedPw] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  async function handleChangePassword() {
+    if (newPassword.length < 8) { setPwError('Password must be at least 8 characters'); return; }
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return; }
+    setPwError(null);
+    setSavingPw(true);
+    try {
+      await updatePassword(newPassword);
+      setSavedPw(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setSavedPw(false), 2500);
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : 'Failed to update password');
+    } finally {
+      setSavingPw(false);
+    }
+  }
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -106,6 +132,53 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                   <p className="mt-1.5 text-xs text-red-500">{nameError}</p>
                 )}
               </div>
+            </div>
+          </section>
+
+          {/* Change Password */}
+          <section>
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Change Password</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">New password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showNewPw ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setPwError(null); }}
+                    placeholder="Min. 8 characters"
+                    className="w-full pl-9 pr-10 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
+                  />
+                  <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm new password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showConfirmPw ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPwError(null); }}
+                    placeholder="Repeat new password"
+                    className="w-full pl-9 pr-10 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              {pwError && <p className="text-xs text-red-500">{pwError}</p>}
+              <button
+                onClick={handleChangePassword}
+                disabled={savingPw || !newPassword || !confirmPassword}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+              >
+                {savedPw ? <><Check className="w-4 h-4" /> Password updated</> : savingPw ? 'Saving…' : 'Update password'}
+              </button>
             </div>
           </section>
 

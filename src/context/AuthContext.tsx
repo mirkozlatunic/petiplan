@@ -18,6 +18,8 @@ interface AuthActions {
   switchOrg: (orgId: string) => void;
   refreshOrgs: () => Promise<void>;
   updateProfile: (displayName: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
 }
 
 type AuthAction =
@@ -254,6 +256,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.user, state.currentOrg]);
 
+  const updatePassword = useCallback(async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }, []);
+
+  const sendPasswordResetEmail = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    });
+    if (error) throw error;
+  }, []);
+
   const actions: AuthActions = {
     signInWithPassword,
     signInWithMagicLink,
@@ -262,6 +276,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     switchOrg,
     refreshOrgs,
     updateProfile,
+    updatePassword,
+    sendPasswordResetEmail,
   };
 
   return (

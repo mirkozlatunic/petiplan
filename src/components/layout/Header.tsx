@@ -123,7 +123,7 @@ function UserMenu({ onNavigateToLogin }: { onNavigateToLogin?: () => void }) {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-60 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden z-[200]">
+          <div className="fixed top-[68px] right-4 sm:right-6 lg:right-8 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden z-[500]">
             <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-slate-700">
               <UserAvatar name={user.displayName} size={40} />
               <div className="min-w-0">
