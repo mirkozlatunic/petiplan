@@ -89,45 +89,58 @@ export default function OtherMaterialsCalculator() {
           {state.otherMaterials.map((m) => (
             <div
               key={m.id}
-              className="flex items-center gap-2 py-1.5 px-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg"
+              className="py-2 px-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg"
             >
-              <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{m.name}</span>
-              <input
-                type="number"
-                className="w-16 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
-                value={m.quantity || ''}
-                min={0}
-                onChange={(e) =>
-                  dispatch({
-                    type: 'UPDATE_OTHER_MATERIAL',
-                    payload: { id: m.id, updates: { quantity: parseFloat(e.target.value) || 0 } },
-                  })
-                }
-              />
-              <span className="text-xs text-gray-500 dark:text-gray-400 w-10">{m.unit}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">@</span>
-              <input
-                type="number"
-                className="w-20 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
-                value={m.costPerUnit || ''}
-                min={0}
-                step={0.01}
-                onChange={(e) =>
-                  dispatch({
-                    type: 'UPDATE_OTHER_MATERIAL',
-                    payload: { id: m.id, updates: { costPerUnit: parseFloat(e.target.value) || 0 } },
-                  })
-                }
-              />
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-24 text-right">
-                {formatCurrency(m.subtotal)}
-              </span>
-              <button
-                onClick={() => dispatch({ type: 'REMOVE_OTHER_MATERIAL', payload: m.id })}
-                className="p-1 text-gray-400 hover:text-danger transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              {/* Mobile: name + trash on top row */}
+              <div className="flex items-center justify-between mb-1.5 sm:hidden">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate pr-2">{m.name}</span>
+                <button
+                  onClick={() => dispatch({ type: 'REMOVE_OTHER_MATERIAL', payload: m.id })}
+                  className="p-1 text-gray-400 hover:text-danger transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {/* Inputs row */}
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:block flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{m.name}</span>
+                <input
+                  type="number"
+                  className="w-16 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
+                  value={m.quantity || ''}
+                  min={0}
+                  onChange={(e) =>
+                    dispatch({
+                      type: 'UPDATE_OTHER_MATERIAL',
+                      payload: { id: m.id, updates: { quantity: parseFloat(e.target.value) || 0 } },
+                    })
+                  }
+                />
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-8 shrink-0">{m.unit}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">@</span>
+                <input
+                  type="number"
+                  className="w-20 px-2 py-1 text-right text-sm bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900 dark:text-gray-100"
+                  value={m.costPerUnit || ''}
+                  min={0}
+                  step={0.01}
+                  onChange={(e) =>
+                    dispatch({
+                      type: 'UPDATE_OTHER_MATERIAL',
+                      payload: { id: m.id, updates: { costPerUnit: parseFloat(e.target.value) || 0 } },
+                    })
+                  }
+                />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 ml-auto sm:w-24 text-right shrink-0">
+                  {formatCurrency(m.subtotal)}
+                </span>
+                <button
+                  onClick={() => dispatch({ type: 'REMOVE_OTHER_MATERIAL', payload: m.id })}
+                  className="hidden sm:flex p-1 text-gray-400 hover:text-danger transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown } from 'lucide-react';
+import { Plus, FolderOpen, Trash2, Clock, Layers, FlaskConical, AlertCircle, Share2, Eye, Pencil, Building2, Folder, ChevronDown, Copy } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import MigrateLocalModal from '@/components/projects/MigrateLocalModal';
 import ShareModal from '@/components/projects/ShareModal';
-import { useProjects } from '@/hooks/useProjects';
 import { useAuthState } from '@/context/AuthContext';
 import { listSavedProjects } from '@/utils/storage';
 import { formatDate } from '@/utils/formatters';
-import type { ProjectRecord, ProjectState, SharePermission } from '@/types';
+import type { ProjectRecord, ProjectState, SavedProject, SharePermission } from '@/types';
 
 interface ProjectsPageProps {
   onOpenProject: (record: ProjectRecord) => void;
   onNewProject: () => void;
+  onUseAsTemplate: (record: ProjectRecord) => void;
+  projects: ProjectRecord[];
+  loading: boolean;
+  error: string | null;
+  onDeleteProject: (id: string) => Promise<void>;
+  onFetchProjects: () => Promise<void>;
+  onMigrateLocalProjects: (locals: SavedProject[]) => Promise<{ imported: number; failed: string[] }>;
 }
 
 const AVATAR_COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#DC2626', '#D97706', '#059669', '#0891B2', '#0284C7'];
@@ -41,12 +47,14 @@ function ProjectCard({
   onOpen,
   onDelete,
   onShare,
+  onUseAsTemplate,
   isOwner,
 }: {
   record: ProjectRecord;
   onOpen: () => void;
   onDelete: () => void;
   onShare: () => void;
+  onUseAsTemplate: () => void;
   isOwner: boolean;
 }) {
   const state = record.state as ProjectState;
@@ -64,6 +72,14 @@ function ProjectCard({
           </h3>
           {isOwner && (
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); onUseAsTemplate(); }}
+                className="p-1 rounded-md text-gray-400 hover:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors"
+                aria-label="Use as template"
+                title="Use as template"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onShare(); }}
                 className="p-1 rounded-md text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
@@ -135,6 +151,7 @@ function Section({
   onOpen,
   onDelete,
   onShare,
+  onUseAsTemplate,
   userId,
 }: {
   title: string;
@@ -143,6 +160,7 @@ function Section({
   onOpen: (r: ProjectRecord) => void;
   onDelete: (id: string) => void;
   onShare: (r: ProjectRecord) => void;
+  onUseAsTemplate: (r: ProjectRecord) => void;
   userId: string;
 }) {
   if (projects.length === 0) return null;
@@ -161,6 +179,7 @@ function Section({
             onOpen={() => onOpen(record)}
             onDelete={() => onDelete(record.id)}
             onShare={() => onShare(record)}
+            onUseAsTemplate={() => onUseAsTemplate(record)}
             isOwner={record.ownerUserId === userId || record.myPermission === 'owner'}
           />
         ))}
@@ -175,6 +194,7 @@ function FolderSection({
   onOpen,
   onDelete,
   onShare,
+  onUseAsTemplate,
   userId,
 }: {
   name: string;
@@ -182,6 +202,7 @@ function FolderSection({
   onOpen: (r: ProjectRecord) => void;
   onDelete: (id: string) => void;
   onShare: (r: ProjectRecord) => void;
+  onUseAsTemplate: (r: ProjectRecord) => void;
   userId: string;
 }) {
   const [open, setOpen] = useState(true);
@@ -213,6 +234,7 @@ function FolderSection({
                   onOpen={() => onOpen(record)}
                   onDelete={() => onDelete(record.id)}
                   onShare={() => onShare(record)}
+                  onUseAsTemplate={() => onUseAsTemplate(record)}
                   isOwner={record.ownerUserId === userId || record.myPermission === 'owner'}
                 />
               ))}
@@ -242,15 +264,17 @@ function EmptyState({ onNewProject }: { onNewProject: () => void }) {
   );
 }
 
-export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPageProps) {
+export default function ProjectsPage({
+  onOpenProject, onNewProject, onUseAsTemplate,
+  projects, loading, error,
+  onDeleteProject, onFetchProjects, onMigrateLocalProjects,
+}: ProjectsPageProps) {
   const { user, currentOrg } = useAuthState();
-  const { projects, loading, error, fetchProjects, deleteProject, migrateLocalProjects } = useProjects();
   const [showMigrate, setShowMigrate] = useState(false);
   const [localProjects, setLocalProjects] = useState(() => listSavedProjects());
   const [shareTarget, setShareTarget] = useState<ProjectRecord | null>(null);
 
   useEffect(() => {
-    fetchProjects();
     const offered = localStorage.getItem('peptiplan-migration-offered');
     if (!offered) {
       const locals = listSavedProjects();
@@ -261,7 +285,6 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
         localStorage.setItem('peptiplan-migration-offered', 'true');
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const myProjects = projects.filter((p) => p.ownerUserId === user?.id);
@@ -313,8 +336,9 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
                       icon={<FolderOpen className="w-4 h-4" />}
                       projects={ungrouped}
                       onOpen={onOpenProject}
-                      onDelete={deleteProject}
+                      onDelete={onDeleteProject}
                       onShare={setShareTarget}
+                      onUseAsTemplate={onUseAsTemplate}
                       userId={user?.id ?? ''}
                     />
                   )}
@@ -324,8 +348,9 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
                       name={folder}
                       projects={myProjects.filter((p) => p.folder === folder)}
                       onOpen={onOpenProject}
-                      onDelete={deleteProject}
+                      onDelete={onDeleteProject}
                       onShare={setShareTarget}
+                      onUseAsTemplate={onUseAsTemplate}
                       userId={user?.id ?? ''}
                     />
                   ))}
@@ -338,8 +363,9 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
                 icon={<Building2 className="w-4 h-4" />}
                 projects={orgProjects}
                 onOpen={onOpenProject}
-                onDelete={deleteProject}
+                onDelete={onDeleteProject}
                 onShare={setShareTarget}
+                onUseAsTemplate={onUseAsTemplate}
                 userId={user?.id ?? ''}
               />
             )}
@@ -349,8 +375,9 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
                 icon={<Share2 className="w-4 h-4" />}
                 projects={sharedProjects}
                 onOpen={onOpenProject}
-                onDelete={deleteProject}
+                onDelete={onDeleteProject}
                 onShare={setShareTarget}
+                onUseAsTemplate={onUseAsTemplate}
                 userId={user?.id ?? ''}
               />
             )}
@@ -361,8 +388,8 @@ export default function ProjectsPage({ onOpenProject, onNewProject }: ProjectsPa
       {showMigrate && (
         <MigrateLocalModal
           localProjects={localProjects}
-          migrateLocalProjects={migrateLocalProjects}
-          onComplete={(imported) => { setShowMigrate(false); if (imported > 0) fetchProjects(); }}
+          migrateLocalProjects={onMigrateLocalProjects}
+          onComplete={(imported) => { setShowMigrate(false); if (imported > 0) onFetchProjects(); }}
           onDismiss={() => setShowMigrate(false)}
         />
       )}

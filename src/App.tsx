@@ -194,7 +194,10 @@ function BuilderPage({
 function AppContent() {
   const { initialized, user } = useAuthState();
   const dispatch = useProjectDispatch();
-  const { saveProject } = useProjects();
+  const {
+    projects, loading: projectsLoading, error: projectsError,
+    fetchProjects, saveProject, deleteProject, migrateLocalProjects,
+  } = useProjects();
   const [page, setPage] = useState<Page>('login');
   const [activeCloudProjectId, setActiveCloudProjectId] = useState<string | null>(null);
 
@@ -207,6 +210,12 @@ function AppContent() {
     }
   }, [user, initialized, page]);
 
+  // Fetch projects once when the user becomes known (persists across page transitions)
+  useEffect(() => {
+    if (user) fetchProjects();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const handleOpenProject = useCallback((record: ProjectRecord) => {
     dispatch({ type: 'LOAD_PROJECT', payload: record.state });
     setActiveCloudProjectId(record.id);
@@ -216,6 +225,22 @@ function AppContent() {
 
   const handleNewProject = useCallback(() => {
     dispatch({ type: 'RESET_PROJECT' });
+    setActiveCloudProjectId(null);
+    setPage('builder');
+    window.scrollTo(0, 0);
+  }, [dispatch]);
+
+  const handleUseAsTemplate = useCallback((record: ProjectRecord) => {
+    dispatch({
+      type: 'LOAD_PROJECT',
+      payload: {
+        ...record.state,
+        projectName: '',
+        startDate: '',
+        targetEndDate: '',
+        previousSnapshot: null,
+      },
+    });
     setActiveCloudProjectId(null);
     setPage('builder');
     window.scrollTo(0, 0);
@@ -249,11 +274,18 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 md:pb-0">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16">
       {page === 'projects' && (
         <ProjectsPage
           onOpenProject={handleOpenProject}
           onNewProject={handleNewProject}
+          onUseAsTemplate={handleUseAsTemplate}
+          projects={projects}
+          loading={projectsLoading}
+          error={projectsError}
+          onDeleteProject={deleteProject}
+          onFetchProjects={fetchProjects}
+          onMigrateLocalProjects={migrateLocalProjects}
         />
       )}
       {page === 'builder' && (
